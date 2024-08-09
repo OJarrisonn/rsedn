@@ -86,7 +86,7 @@ impl<'source> Lexer<'source> {
 
         while let Some(c) = self.peek() {
             match c {
-                '"' => { break; },
+                '"' => { self.consume(); break; },
                 '\\' => {
                     self.consume();
                     self.consume();
@@ -95,13 +95,11 @@ impl<'source> Lexer<'source> {
             }
         }
 
-        // Check if it's `"` ended
-        if let Some('"') = self.peek() {
-            self.consume();
-            Some(Lexeme(start, self.current))
-        } else {
-            None
-        }
+        Some(Lexeme(start, self.current))
+    }
+
+    fn span(&self, lexeme: Lexeme) -> &'source str {
+        &self.source[lexeme.0..lexeme.1]
     }
 }
 
@@ -140,5 +138,14 @@ mod tests {
         let lexemes = source.lex();
         let tokens = lexemes.iter().map(|l| l.as_str(&source)).collect::<Vec<&str>>();
         assert_eq!(tokens, vec!["(", "defn", "hello", "123", ")"])
+ 
+    }
+
+    #[test]
+    fn string_lexemes() {
+        let mut source: Lexer = "(def msg \"Hello World\")".into();
+        let lexemes = source.lex();
+        let tokens = lexemes.iter().map(|l| l.as_str(&source)).collect::<Vec<&str>>();
+        assert_eq!(tokens, vec!["(", "def", "msg", "\"Hello World\"", ")"])
     }
 }

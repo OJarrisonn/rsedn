@@ -170,6 +170,16 @@ impl Lexeme {
     pub fn position(&self) -> (usize, usize) {
         (self.line, self.column)
     }
+
+    /// Get the starting line number of the `Lexeme`.
+    pub fn line(&self) -> usize {
+        self.line
+    }
+
+    /// Get the starting column number of the `Lexeme`.
+    pub fn column(&self) -> usize {
+        self.column
+    }
 }
 
 #[cfg(test)]

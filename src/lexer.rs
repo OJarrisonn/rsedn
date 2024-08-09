@@ -6,7 +6,7 @@ const DELIMITERS: &str = "()[]{}";
 const WHITESPACE: &str = " \t\n\r,";
 
 #[derive(Debug, Clone)]
-pub struct Source<'source> {
+pub struct Lexer<'source> {
     chars: Chars<'source>,
     source: &'source str,
     current: usize
@@ -15,7 +15,7 @@ pub struct Source<'source> {
 #[derive(Debug, Clone, Copy)]
 pub struct Lexeme(usize, usize);
 
-impl<'source> Source<'source> {
+impl<'source> Lexer<'source> {
     pub fn lex(&mut self) -> Vec<Lexeme> {
         let mut lexemes = vec![];
 
@@ -105,7 +105,7 @@ impl<'source> Source<'source> {
     }
 }
 
-impl<'source> From<&'source str> for Source<'source> {
+impl<'source> From<&'source str> for Lexer<'source> {
     fn from(value: &'source str) -> Self {
         Self {
             chars: value.chars(),
@@ -116,7 +116,7 @@ impl<'source> From<&'source str> for Source<'source> {
 }
 
 impl Lexeme {
-    pub fn as_str<'source>(&self, source: &Source<'source>) -> &'source str {
+    pub fn as_str<'source>(&self, source: &Lexer<'source>) -> &'source str {
         &source.source[self.0..self.1]
     }
 }
@@ -127,7 +127,7 @@ mod tests {
 
     #[test]
     fn ignore_whitespace() {
-        let mut source: Source = "  \t\n\r,()[]{}'\"abc".into();
+        let mut source: Lexer = "  \t\n\r,()[]{}'\"abc".into();
         
         source.ignore_whitespace();
         
@@ -136,7 +136,7 @@ mod tests {
 
     #[test]
     fn lexemes_no_string() {
-        let mut source: Source = "(defn hello 123)".into();
+        let mut source: Lexer = "(defn hello 123)".into();
         let lexemes = source.lex();
         let tokens = lexemes.iter().map(|l| l.as_str(&source)).collect::<Vec<&str>>();
         assert_eq!(tokens, vec!["(", "defn", "hello", "123", ")"])

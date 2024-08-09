@@ -5,6 +5,9 @@ use std::str::Chars;
 const DELIMITERS: &str = "()[]{}";
 const WHITESPACE: &str = " \t\n\r,";
 
+/// The lexer struct. It's reponsible for generating a vector of `Lexeme` from source code (`&str`).
+/// 
+/// Can be also used to get the span of a `Lexeme` in the source code.
 #[derive(Debug, Clone)]
 pub struct Lexer<'source> {
     chars: Chars<'source>,
@@ -12,10 +15,14 @@ pub struct Lexer<'source> {
     current: usize
 }
 
+/// A `Lexeme` is a span of the source code. It's represented by a start and end index (consider the source code as an array of bytes).
+/// A `Lexeme` isn't categorized, just a piece of the source code.
 #[derive(Debug, Clone, Copy)]
 pub struct Lexeme(usize, usize);
 
 impl<'source> Lexer<'source> {
+    /// Lex the source code and return a vector of `Lexeme`.
+    /// This won't treat any errors nor classify the lexemes.
     pub fn lex(&mut self) -> Vec<Lexeme> {
         let mut lexemes = vec![];
 
@@ -32,10 +39,12 @@ impl<'source> Lexer<'source> {
         lexemes
     }
 
+    /// Peek the next character in the source code without advancing the reading cursor.
     fn peek(&self) -> Option<char> {
         self.chars.clone().next()
     }
 
+    /// Consume the next character as a lexeme in the source code and advance the reading cursor.
     fn consume(&mut self) -> Option<Lexeme> {
         let start = self.current;
         let next = self.chars.next();
@@ -48,6 +57,7 @@ impl<'source> Lexer<'source> {
         }
     }
 
+    /// Consume characters while the predicate is true producing a `Lexeme`.
     fn consume_while<F: Fn(char) -> bool>(&mut self, f: F) -> Option<Lexeme> {
         let start = self.current;
 
@@ -66,14 +76,17 @@ impl<'source> Lexer<'source> {
         }
     }
 
+    /// Advances the reading cursor while the character is a whitespace.
     fn ignore_whitespace(&mut self) {
         self.consume_while(|c| WHITESPACE.contains(c));
     }
 
+    /// Consume characters while the character is not a delimiter nor a whitespace producing a `Lexeme`.
     fn consume_lexeme(&mut self) -> Option<Lexeme> {
         self.consume_while(|c| !DELIMITERS.contains(c) && !WHITESPACE.contains(c))
     }
 
+    /// Consume a string lexeme which can contain whitespaces.
     fn consume_string(&mut self) -> Option<Lexeme> {
         let start = self.current;
 
@@ -98,6 +111,7 @@ impl<'source> Lexer<'source> {
         Some(Lexeme(start, self.current))
     }
 
+    /// Get the span of a `Lexeme` in the source code.
     fn span(&self, lexeme: Lexeme) -> &'source str {
         &self.source[lexeme.0..lexeme.1]
     }
@@ -114,6 +128,7 @@ impl<'source> From<&'source str> for Lexer<'source> {
 }
 
 impl Lexeme {
+    /// Get the span of the `Lexeme` in the source code.
     pub fn as_str<'source>(&self, source: &Lexer<'source>) -> &'source str {
         &source.source[self.0..self.1]
     }

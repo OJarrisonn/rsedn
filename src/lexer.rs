@@ -5,11 +5,11 @@ use std::str::Chars;
 const DELIMITERS: &str = "()[]{}";
 const WHITESPACE: &str = " \t\n\r,";
 
-/// The lexer struct. It's reponsible for generating a vector of `Lexeme` from source code (`&str`).
+/// The source struct. It's reponsible for generating a vector of `Lexeme` from source code (`&str`).
 /// 
 /// Can be also used to get the span of a `Lexeme` in the source code.
 #[derive(Debug, Clone)]
-pub struct Lexer<'source> {
+pub struct Source<'source> {
     /// The source code as a `Chars` iterator.
     chars: Chars<'source>,
     /// The source code to be lexed.
@@ -25,9 +25,18 @@ pub struct Lexer<'source> {
 /// A `Lexeme` is a span of the source code. It's represented by a start and end index (consider the source code as an array of bytes).
 /// A `Lexeme` isn't categorized, just a piece of the source code.
 #[derive(Debug, Clone, Copy)]
-pub struct Lexeme(usize, usize);
+pub struct Lexeme {
+    /// The starting byte index of the lexeme.
+    start: usize,
+    /// The ending byte index of the lexeme.
+    end: usize,
+    /// The starting line number of the lexeme.
+    line: usize,
+    /// The starting column number of the lexeme.
+    column: usize,
+}
 
-impl<'source> Lexer<'source> {
+impl<'source> Source<'source> {
     /// Lex the source code and return a vector of `Lexeme`.
     /// This won't treat any errors nor classify the lexemes.
     pub fn lex(&mut self) -> Vec<Lexeme> {
@@ -54,6 +63,8 @@ impl<'source> Lexer<'source> {
     /// Consume the next character as a lexeme in the source code and advance the reading cursor.
     fn consume(&mut self) -> Option<Lexeme> {
         let start = self.current;
+        let line = self.line;
+        let column = self.column;
         let next = self.chars.next();
 
         if let Some(c) = next {
@@ -61,12 +72,12 @@ impl<'source> Lexer<'source> {
             
             if c == '\n' {
                 self.line += 1;
-                self.column = 0;
+                self.column = 1;
             } else {
                 self.column += 1;
             }
 
-            Some(Lexeme(start, self.current))
+            Some(Lexeme { start, end: self.current, line, column })
         } else {
             None
         }
@@ -75,6 +86,8 @@ impl<'source> Lexer<'source> {
     /// Consume characters while the predicate is true producing a `Lexeme`.
     fn consume_while<F: Fn(char) -> bool>(&mut self, f: F) -> Option<Lexeme> {
         let start = self.current;
+        let line = self.line;
+        let column = self.column;
 
         while let Some(c) = self.peek() {
             if f(c) {
@@ -87,7 +100,7 @@ impl<'source> Lexer<'source> {
         if start == self.current {
             None
         } else {
-            Some(Lexeme(start, self.current))
+            Some(Lexeme { start, end: self.current, line, column })
         }
     }
 
@@ -104,6 +117,8 @@ impl<'source> Lexer<'source> {
     /// Consume a string lexeme which can contain whitespaces.
     fn consume_string(&mut self) -> Option<Lexeme> {
         let start = self.current;
+        let line = self.line;
+        let column = self.column;
 
         // Check if it's `"` started
         if let Some('"') = self.peek() {
@@ -123,31 +138,37 @@ impl<'source> Lexer<'source> {
             }
         }
 
-        Some(Lexeme(start, self.current))
+        Some(Lexeme { start, end: self.current, line, column })
+
     }
 
     /// Get the span of a `Lexeme` in the source code.
     pub fn span(&self, lexeme: Lexeme) -> &'source str {
-        &self.source[lexeme.0..lexeme.1]
+        &self.source[lexeme.start..lexeme.end]
     }
 }
 
-impl<'source> From<&'source str> for Lexer<'source> {
+impl<'source> From<&'source str> for Source<'source> {
     fn from(value: &'source str) -> Self {
         Self {
             chars: value.chars(),
             source: value,
             current: 0,
-            line: 0,
-            column: 0,
+            line: 1,
+            column: 1,
         }
     }
 }
 
 impl Lexeme {
     /// Get the span of the `Lexeme` in the source code.
-    pub fn as_str<'source>(&self, source: &Lexer<'source>) -> &'source str {
-        &source.source[self.0..self.1]
+    pub fn as_str<'source>(&self, source: &Source<'source>) -> &'source str {
+        &source.source[self.start..self.end]
+    }
+
+    /// Get the position of the `Lexeme` in the source code as (line, column).
+    pub fn position(&self) -> (usize, usize) {
+        (self.line, self.column)
     }
 }
 
@@ -157,7 +178,7 @@ mod tests {
 
     #[test]
     fn ignore_whitespace() {
-        let mut source: Lexer = "  \t\n\r,()[]{}'\"abc".into();
+        let mut source: Source = "  \t\n\r,()[]{}'\"abc".into();
         
         source.ignore_whitespace();
         
@@ -166,7 +187,7 @@ mod tests {
 
     #[test]
     fn lexemes_no_string() {
-        let mut source: Lexer = "(defn hello 123)".into();
+        let mut source: Source = "(defn hello 123)".into();
         let lexemes = source.lex();
         let tokens = lexemes.iter().map(|l| l.as_str(&source)).collect::<Vec<&str>>();
         assert_eq!(tokens, vec!["(", "defn", "hello", "123", ")"])
@@ -175,9 +196,17 @@ mod tests {
 
     #[test]
     fn string_lexemes() {
-        let mut source: Lexer = "(def msg \"Hello World\")".into();
+        let mut source: Source = "(def msg \"Hello World\")".into();
         let lexemes = source.lex();
         let tokens = lexemes.iter().map(|l| l.as_str(&source)).collect::<Vec<&str>>();
         assert_eq!(tokens, vec!["(", "def", "msg", "\"Hello World\"", ")"])
+    }
+
+    #[test]
+    fn line_count() {
+        let mut source: Source = "(defn\nhello\n123)".into();
+        let lexemes = source.lex();
+        let tokens = lexemes.iter().map(|l| l.position()).collect::<Vec<_>>();
+        assert_eq!(tokens, vec![(1, 1), (1, 2), (2, 1), (3, 1), (3, 4)])
     }
 }

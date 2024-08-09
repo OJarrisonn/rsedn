@@ -1,61 +1,123 @@
 //! This is the lexer module. Source code is read as a `Chars` iterator and and it is tokenized into `Token`.
 
-use std::{iter::Peekable, str::Chars};
-use crate::token::Token;
+use std::str::Chars;
 
-const DELIMITERS: &str = " \t\n\r,()[]{}'\"";
+const DELIMITERS: &str = "()[]{}";
 const WHITESPACE: &str = " \t\n\r,";
 
-type Source<'source> = Chars<'source>;
-
-pub fn lex<'source>(source: &'source str) -> Result<Vec<Token<'source>>, String> {
-    let mut source: Source = source.chars();
-    let mut tokens = Vec::new();
-
-    loop {
-        ignore_whitespace(&mut source);
-        let raw = lex_raw_token(&mut source);
-    }
-
-    Ok(tokens)
+#[derive(Debug, Clone)]
+pub struct Source<'source> {
+    chars: Chars<'source>,
+    source: &'source str,
+    current: usize
 }
 
-/// This function gets a &str from chars until a delimiter is found.
-fn lex_raw_token<'source>(source: &mut Source<'source>) -> &'source str {
-    let start = source.as_str();
-    let mut count: usize = 0;
-    while let Some(c) = source.clone().next() {
-        if DELIMITERS.contains(c) {
-            break;
+#[derive(Debug, Clone, Copy)]
+pub struct Lexeme(usize, usize);
+
+impl<'source> Source<'source> {
+    pub fn lex(&mut self) -> Vec<Lexeme> {
+        let mut lexemes = vec![];
+
+        loop {
+            match self.peek() {
+                None => break,
+                Some(c) if DELIMITERS.contains(c) => lexemes.push(self.consume().expect("There should be a delimiter character here to be consumed")),
+                Some(c) if WHITESPACE.contains(c) => self.ignore_whitespace(),
+                Some('"') => lexemes.push(self.consume_string().expect("There should be a valid string lexeme here")),
+                _ => lexemes.push(self.consume_lexeme().expect("There should be a valid lexeme here to be consumed")),
+            }
         }
-        source.next();
-        count += c.len_utf8();
-    }
-    &start[..count]
-}
 
-/// This expects the function to be called after a delimiter is found.
-fn lex_delimiter_token<'source>(source: &mut Source<'source>) -> Token<'source> {
-    let c = source.next().unwrap();
-    match c {
-        '(' => Token::OpenParen,
-        ')' => Token::CloseParen,
-        '[' => Token::OpenBracket,
-        ']' => Token::CloseBracket,
-        '{' => Token::OpenBrace,
-        '}' => Token::CloseBrace,
-        // TODO: Treat `#` 
-        _ => panic!("Unexpected char: {}", c),
+        lexemes
     }
-}
 
-/// Advances chars until a non-whitespace character is found.
-fn ignore_whitespace<'source>(source: &mut Source<'source>) {
-    while let Some(c) = source.clone().next() {
-        if !WHITESPACE.contains(c) { 
-            break; 
+    fn peek(&self) -> Option<char> {
+        self.chars.clone().next()
+    }
+
+    fn consume(&mut self) -> Option<Lexeme> {
+        let start = self.current;
+        let next = self.chars.next();
+
+        if let Some(c) = next {
+            self.current += c.len_utf8();
+            Some(Lexeme(start, self.current))
+        } else {
+            None
         }
-        source.next();
+    }
+
+    fn consume_while<F: Fn(char) -> bool>(&mut self, f: F) -> Option<Lexeme> {
+        let start = self.current;
+
+        while let Some(c) = self.peek() {
+            if f(c) {
+                self.consume();
+            } else {
+                break;
+            }
+        }
+
+        if start == self.current {
+            None
+        } else {
+            Some(Lexeme(start, self.current))
+        }
+    }
+
+    fn ignore_whitespace(&mut self) {
+        self.consume_while(|c| WHITESPACE.contains(c));
+    }
+
+    fn consume_lexeme(&mut self) -> Option<Lexeme> {
+        self.consume_while(|c| !DELIMITERS.contains(c) && !WHITESPACE.contains(c))
+    }
+
+    fn consume_string(&mut self) -> Option<Lexeme> {
+        let start = self.current;
+
+        // Check if it's `"` started
+        if let Some('"') = self.peek() {
+            self.consume();
+        } else {
+            return None;
+        }
+
+        while let Some(c) = self.peek() {
+            match c {
+                '"' => { break; },
+                '\\' => {
+                    self.consume();
+                    self.consume();
+                },
+                _ => { self.consume(); }
+            }
+        }
+
+        // Check if it's `"` ended
+        if let Some('"') = self.peek() {
+            self.consume();
+            Some(Lexeme(start, self.current))
+        } else {
+            None
+        }
+    }
+}
+
+impl<'source> From<&'source str> for Source<'source> {
+    fn from(value: &'source str) -> Self {
+        Self {
+            chars: value.chars(),
+            source: value,
+            current: 0,
+        }
+    }
+}
+
+impl Lexeme {
+    pub fn as_str<'source>(&self, source: &Source<'source>) -> &'source str {
+        &source.source[self.0..self.1]
     }
 }
 
@@ -64,38 +126,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_ignore_whitespace() {
-        let mut source: Source = "  \t\n\r,()[]{}'\"abc".chars();
+    fn ignore_whitespace() {
+        let mut source: Source = "  \t\n\r,()[]{}'\"abc".into();
         
-        ignore_whitespace(&mut source);
+        source.ignore_whitespace();
         
-        assert_eq!(source.as_str(), "()[]{}'\"abc");
+        assert_eq!(&source.source[source.current..], "()[]{}'\"abc");
     }
 
     #[test]
-    fn test_lex_a_token() {
-        let mut source: Source = "abc 123".chars();
-        
-        let token = lex_raw_token(&mut source);
-        
-        assert_eq!(token, "abc");
-    }
-
-    #[test]
-    fn test_lex_a_token_with_delimiter() {
-        let mut source: Source = "abc, 123".chars();
-        
-        let token = lex_raw_token(&mut source);
-        
-        assert_eq!(token, "abc");
-    }
-
-    #[test]
-    fn test_lex_a_delimiter_as_token() {
-        let mut source: Source = "()".chars();
-        
-        let token = lex_raw_token(&mut source);
-        
-        assert_eq!(token, "(");
+    fn lexemes_no_string() {
+        let mut source: Source = "(defn hello 123)".into();
+        let lexemes = source.lex();
+        let tokens = lexemes.iter().map(|l| l.as_str(&source)).collect::<Vec<&str>>();
+        assert_eq!(tokens, vec!["(", "defn", "hello", "123", ")"])
     }
 }

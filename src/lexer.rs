@@ -10,9 +10,16 @@ const WHITESPACE: &str = " \t\n\r,";
 /// Can be also used to get the span of a `Lexeme` in the source code.
 #[derive(Debug, Clone)]
 pub struct Lexer<'source> {
+    /// The source code as a `Chars` iterator.
     chars: Chars<'source>,
+    /// The source code to be lexed.
     source: &'source str,
-    current: usize
+    /// The current byte index in the source code.
+    current: usize,
+    /// The line number of the current char
+    line: usize,
+    /// The column number of the current char
+    column: usize,
 }
 
 /// A `Lexeme` is a span of the source code. It's represented by a start and end index (consider the source code as an array of bytes).
@@ -51,6 +58,14 @@ impl<'source> Lexer<'source> {
 
         if let Some(c) = next {
             self.current += c.len_utf8();
+            
+            if c == '\n' {
+                self.line += 1;
+                self.column = 0;
+            } else {
+                self.column += 1;
+            }
+
             Some(Lexeme(start, self.current))
         } else {
             None
@@ -112,7 +127,7 @@ impl<'source> Lexer<'source> {
     }
 
     /// Get the span of a `Lexeme` in the source code.
-    fn span(&self, lexeme: Lexeme) -> &'source str {
+    pub fn span(&self, lexeme: Lexeme) -> &'source str {
         &self.source[lexeme.0..lexeme.1]
     }
 }
@@ -123,6 +138,8 @@ impl<'source> From<&'source str> for Lexer<'source> {
             chars: value.chars(),
             source: value,
             current: 0,
+            line: 0,
+            column: 0,
         }
     }
 }

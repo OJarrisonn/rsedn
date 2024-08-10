@@ -16,7 +16,7 @@ pub enum FormKind<'source> {
     Set(Vec<Form<'source>>),
     Keyword(&'source str),
     Symbol(&'source str),
-    Tag(&'source str),
+    Tag(&'source str, Box<Form<'source>>),
     Discard(&'source str),
     Integer(i64),
     Float(f64),
@@ -65,7 +65,7 @@ impl<'source> Display for Form<'source> {
             }
             FormKind::Keyword(span) => write!(f, ":{}", span),
             FormKind::Symbol(span) => write!(f, "{}", span),
-            FormKind::Tag(span) => write!(f, "#{}", span),
+            FormKind::Tag(span, form) => write!(f, "#{} {}", span, form),
             FormKind::Discard(span) => write!(f, "#_{}", span),
             FormKind::Integer(span) => write!(f, "{}", span),
             FormKind::Float(span) => write!(f, "{}", span),

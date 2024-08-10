@@ -103,7 +103,6 @@ impl<'source> Token<'source> {
             | TokenKind::Character(_)
             | TokenKind::Symbol(_)
             | TokenKind::Keyword(_)
-            | TokenKind::Tag(_)
             | TokenKind::Discard(_)
             | TokenKind::Integer(_)
             | TokenKind::Float(_) => true,

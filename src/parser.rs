@@ -34,7 +34,8 @@ pub fn parse_form<'source>(
         TokenKind::OpenHashBrace => parse_set(stream).map(Some),
         TokenKind::CloseBracket | TokenKind::CloseBrace | TokenKind::CloseParen => {
             Err(ParsingError::UnexpectedToken(token.clone()))
-        }
+        },
+        TokenKind::Tag(_) => parse_tagged_element(stream).map(Some),
         _ if token.is_terminal() => {
             stream.next();
             parse_terminal_token(&token).map(Some)
@@ -52,7 +53,6 @@ fn parse_terminal_token<'source>(
     let kind = match &token.kind {
         TokenKind::Keyword(span) => Ok(FormKind::Keyword(span)),
         TokenKind::Symbol(span) => Ok(FormKind::Symbol(span)),
-        TokenKind::Tag(span) => Ok(FormKind::Tag(span)),
         TokenKind::Discard(span) => Ok(FormKind::Discard(span)),
         TokenKind::Integer(span) => Ok(FormKind::Integer(*span)),
         TokenKind::Float(span) => Ok(FormKind::Float(*span)),
@@ -264,6 +264,29 @@ fn parse_set<'source>(
     Ok(Form {
         kind: FormKind::Vector(forms),
         lexeme: start_lexeme.join(&end_lexeme),
+    })
+}
+
+fn parse_tagged_element<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'source>, ParsingError<'source>> {
+    let (tag, lexeme) = if let Some(token) = stream.next() {
+        if let TokenKind::Tag(tag) = token.kind {
+            (tag, token.lexeme)
+        } else {
+            return Err(ParsingError::UnexpectedTokenExpected(token.clone(), TokenKind::Tag("")));
+        }
+    } else {
+        return Err(ParsingError::UnexpectedEOF(None));
+    };
+
+    let form = match parse_form(stream) {
+        Ok(Some(form)) => form,
+        Ok(None) => return Err(ParsingError::UnexpectedEOF(Some(lexeme))),
+        Err(e) => return Err(e),
+    };
+
+    Ok(Form {
+        lexeme: lexeme.join(&form.lexeme),
+        kind: FormKind::Tag(tag, Box::new(form)),
     })
 }
 

@@ -59,6 +59,9 @@ impl<'source> Source<'source> {
                     self.consume_string()
                         .expect("There should be a valid string lexeme here"),
                 ),
+                Some(';') => {
+                    self.consume_while(|c| c != '\n');
+                }
                 _ => lexemes.push(
                     self.consume_lexeme()
                         .expect("There should be a valid lexeme here to be consumed"),
@@ -266,5 +269,16 @@ mod tests {
         let lexemes = source.lex();
         let tokens = lexemes.iter().map(|l| l.position()).collect::<Vec<_>>();
         assert_eq!(tokens, vec![(1, 1), (1, 2), (2, 1), (3, 1), (3, 4)])
+    }
+
+    #[test]
+    fn commentary() {
+        let mut source: Source = ";; A comment\n(defn hello 123) ; Another comment".into();
+        let lexemes = source.lex();
+        assert_eq!(lexemes
+            .iter()
+            .map(|l| l.as_str(&source))
+            .collect::<Vec<&str>>(),
+            vec!["(", "defn", "hello", "123", ")"]);
     }
 }

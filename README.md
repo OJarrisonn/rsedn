@@ -19,7 +19,7 @@
 - [ ] Strings (unsupported `\uNNNN` unicode sequences)
 - [x] Characters
 - [x] Built-in tagged elements (`#inst` and `#uuid`)
-- [ ] Comments (not implemented)
+- [x] Comments
 
 ## Usage
 

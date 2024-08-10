@@ -18,4 +18,22 @@ mod tests {
 
         assert!(matches!(form.kind, FormKind::List(_)));
     }
+
+    #[test]
+    fn hello_world() {
+        let mut source: Source = r#"
+        (defn hello_world 
+            "Documentation string" 
+            [arg1 & args] 
+            (println "Hello World " arg1 args))"#.into();
+        let lexemes = source.lex();
+        let tokens = lexemes
+            .into_iter()
+            .map(|lexeme| Token::parse(&source, lexeme))
+            .map(|token| token.unwrap())
+            .collect::<LinkedList<_>>();
+        let form = parse_list(&mut tokens.iter()).unwrap();
+
+        assert!(matches!(form.kind, FormKind::List(_)));
+    }
 }

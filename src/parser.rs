@@ -45,7 +45,7 @@ pub fn parse_tokens<'source>(
 
     match token.kind {
         TokenKind::OpenParen => parse_list(stream).map(Some),
-        _ if token.is_terminal() => parse_terminal_token(&token).map(Some),
+        _ if token.is_terminal() => {stream.next(); parse_terminal_token(&token).map(Some)},
         _ => Err(format!(
             "Token ain't terminal: [{}:{}] {:?}",
             token.lexeme.line(),
@@ -55,6 +55,9 @@ pub fn parse_tokens<'source>(
     }
 }
 
+/// Parse a terminal token into a Form
+/// Returns an error if the token is not terminal
+/// Won't consume the token, nor the token stream
 pub fn parse_terminal_token<'source>(token: &Token<'source>) -> Result<Form<'source>, String> {
     let kind = match &token.kind {
         TokenKind::Keyword(span) => Ok(FormKind::Keyword(span)),

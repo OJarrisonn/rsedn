@@ -2,5 +2,7 @@
 name = "rsedn"
 version = "0.1.0"
 edition = "2021"
+author = "Jorge Harrisonn <j.h.m.t.v.10@gmail.com>"
+description = "A Rust library for reading and writing EDN (Extensible Data Notation) data."
 
 [dependencies]

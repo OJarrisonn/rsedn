@@ -45,6 +45,9 @@ impl PartialEq for Form<'_> {
     }
 }
 
+/// Take a token stream and parse it into a Form consuming tokens in the head
+/// If the stream is empty, returns None
+/// The token stream may not be empty after the call, so it's possible to continue parsing until it returns `Ok(None)`
 pub fn parse_tokens<'source>(
     stream: &mut TokenStream<'source>,
 ) -> Result<Option<Form<'source>>, ParsingError<'source>> {
@@ -285,3 +288,54 @@ impl Display for ParsingError<'_> {
 }
 
 impl Error for ParsingError<'_> {}
+
+impl<'source> Display for Form<'source> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.kind {
+            FormKind::List(forms) => {
+                write!(f, "( ")?;
+                for form in forms {
+                    write!(f, "{} ", form)?;
+                }
+                write!(f, ")")
+            },
+            FormKind::Vector(forms) => {
+                write!(f, "[ ")?;
+                for form in forms {
+                    write!(f, "{} ", form)?;
+                }
+                write!(f, "]")
+            },
+            FormKind::Map(forms) => {
+                write!(f, "{{ ")?;
+                for (key, value) in forms {
+                    write!(f, "{} {}, ", key, value)?;
+                }
+                write!(f, "}}")
+            },
+            FormKind::Set(forms) => {
+                write!(f, "#{{ ")?;
+                for form in forms {
+                    write!(f, "{} ", form)?;
+                }
+                write!(f, "}}")
+            },
+            FormKind::Keyword(span) => write!(f, ":{}", span),
+            FormKind::Symbol(span) => write!(f, "{}", span),
+            FormKind::Tag(span) => write!(f, "#{}", span),
+            FormKind::Discard(span) => write!(f, "#_{}", span),
+            FormKind::Integer(span) => write!(f, "{}", span),
+            FormKind::Float(span) => write!(f, "{}", span),
+            FormKind::Boolean(span) => write!(f, "{}", span),
+            FormKind::Character(span) => write!(f, "\\{}", match span {
+                '\n' => "newline",
+                '\r' => "return",
+                '\t' => "tab",
+                ' ' => "space",
+                c => return write!(f, "\\{}", c),
+            }),
+            FormKind::String(span) => write!(f, "\"{}\"", span),
+            FormKind::Nil => write!(f, "nil"),
+        }
+    }
+}

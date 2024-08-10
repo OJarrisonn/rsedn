@@ -45,10 +45,10 @@ impl PartialEq for Form<'_> {
     }
 }
 
-/// Take a token stream and parse it into a Form consuming tokens in the head
+/// Take a token stream and parse it into a Form consuming tokens in the head of the stream
 /// If the stream is empty, returns None
 /// The token stream may not be empty after the call, so it's possible to continue parsing until it returns `Ok(None)`
-pub fn parse_tokens<'source>(
+pub fn parse_form<'source>(
     stream: &mut TokenStream<'source>,
 ) -> Result<Option<Form<'source>>, ParsingError<'source>> {
     let token = match stream.clone().next() {
@@ -72,7 +72,7 @@ pub fn parse_tokens<'source>(
 /// Parse a terminal token into a Form
 /// Returns an error if the token is not terminal
 /// Won't consume the token, nor the token stream
-pub fn parse_terminal_token<'source>(token: &Token<'source>) -> Result<Form<'source>, ParsingError<'source>> {
+fn parse_terminal_token<'source>(token: &Token<'source>) -> Result<Form<'source>, ParsingError<'source>> {
     let kind = match &token.kind {
         TokenKind::Keyword(span) => Ok(FormKind::Keyword(span)),
         TokenKind::Symbol(span) => Ok(FormKind::Symbol(span)),
@@ -93,7 +93,7 @@ pub fn parse_terminal_token<'source>(token: &Token<'source>) -> Result<Form<'sou
     })
 }
 
-pub fn parse_list<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'source>, ParsingError<'source>> {
+fn parse_list<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'source>, ParsingError<'source>> {
     let mut forms = Vec::new();
 
     let start_lexeme = if let Some(token) = stream.next() {
@@ -116,7 +116,7 @@ pub fn parse_list<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'so
                     break;
                 }
 
-                match parse_tokens(stream) {
+                match parse_form(stream) {
                     Ok(Some(form)) => {
                         end_lexeme = form.lexeme;
                         forms.push(form);
@@ -135,7 +135,7 @@ pub fn parse_list<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'so
     })
 }
 
-pub fn parse_vector<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'source>, ParsingError<'source>> {
+fn parse_vector<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'source>, ParsingError<'source>> {
     let mut forms = Vec::new();
 
     let start_lexeme = if let Some(token) = stream.next() {
@@ -158,7 +158,7 @@ pub fn parse_vector<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'
                     break;
                 }
 
-                match parse_tokens(stream) {
+                match parse_form(stream) {
                     Ok(Some(form)) => {
                         end_lexeme = form.lexeme;
                         forms.push(form);
@@ -177,7 +177,7 @@ pub fn parse_vector<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'
     })
 }
 
-pub fn parse_map<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'source>, ParsingError<'source>> {
+fn parse_map<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'source>, ParsingError<'source>> {
     let mut forms = Vec::new();
 
     let start_lexeme = if let Some(token) = stream.next() {
@@ -200,12 +200,12 @@ pub fn parse_map<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'sou
                     break;
                 }
 
-                match parse_tokens(stream) {
+                match parse_form(stream) {
                     Ok(Some(form)) => {
                         end_lexeme = form.lexeme;
                         let key = form;
 
-                        match parse_tokens(stream) {
+                        match parse_form(stream) {
                             Ok(Some(form)) => {
                                 end_lexeme = form.lexeme;
                                 let value = form;
@@ -230,7 +230,7 @@ pub fn parse_map<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'sou
 }
 
 
-pub fn parse_set<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'source>, ParsingError<'source>> {
+fn parse_set<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'source>, ParsingError<'source>> {
     let mut forms = Vec::new();
 
     let start_lexeme = if let Some(token) = stream.next() {
@@ -253,7 +253,7 @@ pub fn parse_set<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'sou
                     break;
                 }
 
-                match parse_tokens(stream) {
+                match parse_form(stream) {
                     Ok(Some(form)) => {
                         end_lexeme = form.lexeme;
                         forms.push(form);

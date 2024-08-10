@@ -1,5 +1,8 @@
 use std::fmt::Display;
 
+use chrono::{DateTime, Local};
+use uuid::Uuid;
+
 use crate::lexer::Lexeme;
 
 #[derive(Debug, Clone)]
@@ -16,13 +19,15 @@ pub enum FormKind<'source> {
     Set(Vec<Form<'source>>),
     Keyword(&'source str),
     Symbol(&'source str),
-    Tag(&'source str, Box<Form<'source>>),
+    Tagged(&'source str, Box<Form<'source>>),
     Discard(&'source str),
     Integer(i64),
     Float(f64),
     Boolean(bool),
     Character(char),
     String(String),
+    Inst(DateTime<Local>),
+    UUID(Uuid),
     Nil,
 }
 
@@ -65,7 +70,9 @@ impl<'source> Display for Form<'source> {
             }
             FormKind::Keyword(span) => write!(f, ":{}", span),
             FormKind::Symbol(span) => write!(f, "{}", span),
-            FormKind::Tag(span, form) => write!(f, "#{} {}", span, form),
+            FormKind::Tagged(span, form) => write!(f, "#{} {}", span, form),
+            FormKind::Inst(dt) => write!(f, "#inst \"{}\"", dt.to_rfc3339()),
+            FormKind::UUID(uuid) => write!(f, "#uuid \"{}\"", uuid.as_hyphenated()),
             FormKind::Discard(span) => write!(f, "#_{}", span),
             FormKind::Integer(span) => write!(f, "{}", span),
             FormKind::Float(span) => write!(f, "{}", span),

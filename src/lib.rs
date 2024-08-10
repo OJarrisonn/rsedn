@@ -40,6 +40,7 @@ use lexer::{Lexeme, Source};
 use parser::ParsingError;
 use token::{Token, TokenStream, TokenizationError};
 
+mod builtin_tag;
 pub mod error;
 pub mod form;
 pub mod lexer;

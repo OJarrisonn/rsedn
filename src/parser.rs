@@ -45,6 +45,24 @@ pub fn parse_tokens<'source>(
 
     match token.kind {
         TokenKind::OpenParen => parse_list(stream).map(Some),
+        TokenKind::OpenBracket => parse_vector(stream).map(Some),
+        TokenKind::OpenBrace => parse_map(stream).map(Some),
+        TokenKind::OpenHashBrace => parse_set(stream).map(Some),
+        TokenKind::CloseParen => Err(format!(
+            "Unexpected `)` at [{}:{}]",
+            token.lexeme.line(),
+            token.lexeme.column()
+        )),
+        TokenKind::CloseBracket => Err(format!(
+            "Unexpected `]` at [{}:{}]",
+            token.lexeme.line(),
+            token.lexeme.column()
+        )),
+        TokenKind::CloseBrace => Err(format!(
+            "Unexpected `}}` at [{}:{}]",
+            token.lexeme.line(),
+            token.lexeme.column()
+        )),
         _ if token.is_terminal() => {stream.next(); parse_terminal_token(&token).map(Some)},
         _ => Err(format!(
             "Token ain't terminal: [{}:{}] {:?}",
@@ -176,3 +194,105 @@ pub fn parse_vector<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'
     })
 }
 
+pub fn parse_map<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'source>, String> {
+    let mut forms = Vec::new();
+
+    let start_lexeme = if let Some(token) = stream.next() {
+        if token.kind != TokenKind::OpenBrace {
+            return Err(format!(
+                "Expected `{{` at [{}:{}]",
+                token.lexeme.line(),
+                token.lexeme.column()
+            ));
+        } else {
+            token.lexeme
+        }
+    } else {
+        return Err("Unexpected EOF".to_string());
+    };
+
+    let mut end_lexeme = start_lexeme;
+
+    loop {
+        match stream.clone().next() {
+            Some(token) => {
+                if token.kind == TokenKind::CloseBrace {
+                    stream.next();
+                    break;
+                }
+
+                match parse_tokens(stream) {
+                    Ok(Some(form)) => {
+                        end_lexeme = form.lexeme;
+                        let key = form;
+
+                        match parse_tokens(stream) {
+                            Ok(Some(form)) => {
+                                end_lexeme = form.lexeme;
+                                let value = form;
+                                forms.push((key, value));
+                            }
+                            Ok(None) => return Err("Unexpected EOF, expected value".to_string()),
+                            Err(e) => return Err(e),
+                        }
+                    }
+                    Ok(None) => return Err("Unexpected EOF, expected `}`".to_string()),
+                    Err(e) => return Err(e),
+                }
+            },
+            None => return Err("Unexpected EOF, expected `}`".to_string()),
+        }
+    }
+
+    Ok(Form {
+        kind: FormKind::Map(forms),
+        lexeme: start_lexeme.join(&end_lexeme),
+    })
+}
+
+
+pub fn parse_set<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'source>, String> {
+    let mut forms = Vec::new();
+
+    let start_lexeme = if let Some(token) = stream.next() {
+        if token.kind != TokenKind::OpenHashBrace {
+            return Err(format!(
+                "Expected `[` at [{}:{}]",
+                token.lexeme.line(),
+                token.lexeme.column()
+            ));
+        } else {
+            token.lexeme
+        }
+    } else {
+        return Err("Unexpected EOF".to_string());
+    };
+
+    let mut end_lexeme = start_lexeme;
+
+    loop {
+        match stream.clone().next() {
+            Some(token) => {
+                if token.kind == TokenKind::CloseBrace {
+                    stream.next();
+                    break;
+                }
+
+                match parse_tokens(stream) {
+                    Ok(Some(form)) => {
+                        end_lexeme = form.lexeme;
+                        forms.push(form);
+                    }
+                    Ok(None) => return Err("Unexpected EOF".to_string()),
+                    Err(e) => return Err(e),
+                }
+            },
+            None => return Err("Unexpected EOF".to_string()),
+        }
+    }
+
+    Ok(Form {
+        kind: FormKind::Vector(forms),
+        lexeme: start_lexeme.join(&end_lexeme),
+    })
+}

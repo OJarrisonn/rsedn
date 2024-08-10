@@ -24,7 +24,7 @@ pub struct Source<'source> {
 
 /// A `Lexeme` is a span of the source code. It's represented by a start and end index (consider the source code as an array of bytes).
 /// A `Lexeme` isn't categorized, just a piece of the source code.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Lexeme {
     /// The starting byte index of the lexeme.
     start: usize,

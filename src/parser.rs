@@ -1,5 +1,7 @@
 //! Takes tokens and builds an AST of Forms
 
+use std::{error::Error, fmt::Display};
+
 use crate::{
     lexer::Lexeme,
     token::{Token, TokenKind, TokenStream},
@@ -29,6 +31,14 @@ pub enum FormKind<'source> {
     Nil,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum ParsingError<'source> {
+    UnexpectedEOF(Option<Lexeme>),
+    UnexpectedToken(Token<'source>),
+    UnexpectedTokenExpected(Token<'source>, TokenKind<'source>),
+    NonTerminalToken(Token<'source>),
+}
+
 impl PartialEq for Form<'_> {
     fn eq(&self, other: &Self) -> bool {
         self.kind == other.kind
@@ -37,7 +47,7 @@ impl PartialEq for Form<'_> {
 
 pub fn parse_tokens<'source>(
     stream: &mut TokenStream<'source>,
-) -> Result<Option<Form<'source>>, String> {
+) -> Result<Option<Form<'source>>, ParsingError<'source>> {
     let token = match stream.clone().next() {
         Some(token) => token,
         None => return Ok(None),
@@ -48,35 +58,18 @@ pub fn parse_tokens<'source>(
         TokenKind::OpenBracket => parse_vector(stream).map(Some),
         TokenKind::OpenBrace => parse_map(stream).map(Some),
         TokenKind::OpenHashBrace => parse_set(stream).map(Some),
-        TokenKind::CloseParen => Err(format!(
-            "Unexpected `)` at [{}:{}]",
-            token.lexeme.line(),
-            token.lexeme.column()
-        )),
-        TokenKind::CloseBracket => Err(format!(
-            "Unexpected `]` at [{}:{}]",
-            token.lexeme.line(),
-            token.lexeme.column()
-        )),
-        TokenKind::CloseBrace => Err(format!(
-            "Unexpected `}}` at [{}:{}]",
-            token.lexeme.line(),
-            token.lexeme.column()
-        )),
-        _ if token.is_terminal() => {stream.next(); parse_terminal_token(&token).map(Some)},
-        _ => Err(format!(
-            "Token ain't terminal: [{}:{}] {:?}",
-            token.lexeme.line(),
-            token.lexeme.column(),
-            token
-        )),
+        TokenKind::CloseBracket |
+        TokenKind::CloseBrace |
+        TokenKind::CloseParen => Err(ParsingError::UnexpectedToken(token.clone())),
+        _ if token.is_terminal() => { stream.next(); parse_terminal_token(&token).map(Some) },
+        _ => Err(ParsingError::UnexpectedToken(token.clone())),
     }
 }
 
 /// Parse a terminal token into a Form
 /// Returns an error if the token is not terminal
 /// Won't consume the token, nor the token stream
-pub fn parse_terminal_token<'source>(token: &Token<'source>) -> Result<Form<'source>, String> {
+pub fn parse_terminal_token<'source>(token: &Token<'source>) -> Result<Form<'source>, ParsingError<'source>> {
     let kind = match &token.kind {
         TokenKind::Keyword(span) => Ok(FormKind::Keyword(span)),
         TokenKind::Symbol(span) => Ok(FormKind::Symbol(span)),
@@ -88,12 +81,7 @@ pub fn parse_terminal_token<'source>(token: &Token<'source>) -> Result<Form<'sou
         TokenKind::Character(span) => Ok(FormKind::Character(*span)),
         TokenKind::String(span) => Ok(FormKind::String(span.clone())),
         TokenKind::Nil => Ok(FormKind::Nil),
-        _ => Err(format!(
-            "Token ain't terminal: [{}:{}] {:?}",
-            token.lexeme.line(),
-            token.lexeme.column(),
-            token
-        )),
+        _ => Err(ParsingError::NonTerminalToken(token.clone())),
     };
 
     kind.map(|kind| Form {
@@ -102,21 +90,17 @@ pub fn parse_terminal_token<'source>(token: &Token<'source>) -> Result<Form<'sou
     })
 }
 
-pub fn parse_list<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'source>, String> {
+pub fn parse_list<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'source>, ParsingError<'source>> {
     let mut forms = Vec::new();
 
     let start_lexeme = if let Some(token) = stream.next() {
         if token.kind != TokenKind::OpenParen {
-            return Err(format!(
-                "Expected `(` at [{}:{}]",
-                token.lexeme.line(),
-                token.lexeme.column()
-            ));
+            return Err(ParsingError::UnexpectedTokenExpected(token.clone(), TokenKind::OpenParen));
         } else {
             token.lexeme
         }
     } else {
-        return Err("Unexpected EOF".to_string());
+        return Err(ParsingError::UnexpectedEOF(None));
     };
 
     let mut end_lexeme = start_lexeme;
@@ -134,11 +118,11 @@ pub fn parse_list<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'so
                         end_lexeme = form.lexeme;
                         forms.push(form);
                     }
-                    Ok(None) => return Err("Unexpected EOF".to_string()),
+                    Ok(None) => return Err(ParsingError::UnexpectedEOF(Some(end_lexeme))),
                     Err(e) => return Err(e),
                 }
             },
-            None => return Err("Unexpected EOF".to_string()),
+            None => return Err(ParsingError::UnexpectedEOF(Some(end_lexeme))),
         }
     }
 
@@ -148,21 +132,17 @@ pub fn parse_list<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'so
     })
 }
 
-pub fn parse_vector<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'source>, String> {
+pub fn parse_vector<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'source>, ParsingError<'source>> {
     let mut forms = Vec::new();
 
     let start_lexeme = if let Some(token) = stream.next() {
         if token.kind != TokenKind::OpenBracket {
-            return Err(format!(
-                "Expected `[` at [{}:{}]",
-                token.lexeme.line(),
-                token.lexeme.column()
-            ));
+            return Err(ParsingError::UnexpectedTokenExpected(token.clone(), TokenKind::OpenBracket));
         } else {
             token.lexeme
         }
     } else {
-        return Err("Unexpected EOF".to_string());
+        return Err(ParsingError::UnexpectedEOF(None));
     };
 
     let mut end_lexeme = start_lexeme;
@@ -180,11 +160,11 @@ pub fn parse_vector<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'
                         end_lexeme = form.lexeme;
                         forms.push(form);
                     }
-                    Ok(None) => return Err("Unexpected EOF".to_string()),
+                    Ok(None) => return Err(ParsingError::UnexpectedEOF(Some(end_lexeme))),
                     Err(e) => return Err(e),
                 }
             },
-            None => return Err("Unexpected EOF".to_string()),
+            None => return Err(ParsingError::UnexpectedEOF(Some(end_lexeme))),
         }
     }
 
@@ -194,21 +174,17 @@ pub fn parse_vector<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'
     })
 }
 
-pub fn parse_map<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'source>, String> {
+pub fn parse_map<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'source>, ParsingError<'source>> {
     let mut forms = Vec::new();
 
     let start_lexeme = if let Some(token) = stream.next() {
         if token.kind != TokenKind::OpenBrace {
-            return Err(format!(
-                "Expected `{{` at [{}:{}]",
-                token.lexeme.line(),
-                token.lexeme.column()
-            ));
+            return Err(ParsingError::UnexpectedTokenExpected(token.clone(), TokenKind::OpenBrace));
         } else {
             token.lexeme
         }
     } else {
-        return Err("Unexpected EOF".to_string());
+        return Err(ParsingError::UnexpectedEOF(None));
     };
 
     let mut end_lexeme = start_lexeme;
@@ -232,15 +208,15 @@ pub fn parse_map<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'sou
                                 let value = form;
                                 forms.push((key, value));
                             }
-                            Ok(None) => return Err("Unexpected EOF, expected value".to_string()),
+                            Ok(None) => return Err(ParsingError::UnexpectedEOF(Some(end_lexeme))),
                             Err(e) => return Err(e),
                         }
                     }
-                    Ok(None) => return Err("Unexpected EOF, expected `}`".to_string()),
+                    Ok(None) => return Err(ParsingError::UnexpectedEOF(Some(end_lexeme))),
                     Err(e) => return Err(e),
                 }
             },
-            None => return Err("Unexpected EOF, expected `}`".to_string()),
+            None => return Err(ParsingError::UnexpectedEOF(Some(end_lexeme))),
         }
     }
 
@@ -251,21 +227,17 @@ pub fn parse_map<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'sou
 }
 
 
-pub fn parse_set<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'source>, String> {
+pub fn parse_set<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'source>, ParsingError<'source>> {
     let mut forms = Vec::new();
 
     let start_lexeme = if let Some(token) = stream.next() {
         if token.kind != TokenKind::OpenHashBrace {
-            return Err(format!(
-                "Expected `[` at [{}:{}]",
-                token.lexeme.line(),
-                token.lexeme.column()
-            ));
+            return Err(ParsingError::UnexpectedTokenExpected(token.clone(), TokenKind::OpenHashBrace));
         } else {
             token.lexeme
         }
     } else {
-        return Err("Unexpected EOF".to_string());
+        return Err(ParsingError::UnexpectedEOF(None));
     };
 
     let mut end_lexeme = start_lexeme;
@@ -283,11 +255,11 @@ pub fn parse_set<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'sou
                         end_lexeme = form.lexeme;
                         forms.push(form);
                     }
-                    Ok(None) => return Err("Unexpected EOF".to_string()),
+                    Ok(None) => return Err(ParsingError::UnexpectedEOF(Some(end_lexeme))),
                     Err(e) => return Err(e),
                 }
             },
-            None => return Err("Unexpected EOF".to_string()),
+            None => return Err(ParsingError::UnexpectedEOF(Some(end_lexeme))),
         }
     }
 
@@ -296,3 +268,20 @@ pub fn parse_set<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'sou
         lexeme: start_lexeme.join(&end_lexeme),
     })
 }
+
+impl Display for ParsingError<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ParsingError::UnexpectedEOF(lexeme) => if let Some(lexeme) = lexeme {
+                write!(f, "Unexpected EOF at [{}:{}]", lexeme.line(), lexeme.column())
+            } else {
+                write!(f, "Unexpected EOF")
+            },
+            ParsingError::UnexpectedToken(token) => write!(f, "Unexpected token {}", token.kind),
+            ParsingError::UnexpectedTokenExpected(token, expected) => write!(f, "Unexpected token [{}:{}] {}, expected {}", token.lexeme.line(), token.lexeme.column(), token.kind, expected),
+            ParsingError::NonTerminalToken(token) => write!(f, "Non-terminal token [{}:{}] {}", token.lexeme.line(), token.lexeme.column(), token.kind),
+        }
+    }
+}
+
+impl Error for ParsingError<'_> {}

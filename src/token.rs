@@ -4,7 +4,10 @@ use std::{
     fmt::{self, Display, Formatter},
 };
 
-use crate::lexer::{Lexeme, Source};
+use crate::{
+    builtin_tag::BuiltInTag,
+    lexer::{Lexeme, Source},
+};
 
 const SYMBOL_CONSTITUENT: &str = ".*+!-_?$%&=<>:#";
 const SYMBOL_STARTER: &str = ".*+!-_?$%&=<>";
@@ -36,7 +39,8 @@ pub enum TokenKind<'source> {
     Character(char),
     Symbol(&'source str),
     Keyword(&'source str),
-    Tag(&'source str),
+    PrefixedTag(&'source str),
+    BuiltInTag(BuiltInTag),
     Discard(&'source str),
     Integer(i64),
     Float(f64),
@@ -87,7 +91,10 @@ impl<'source> Token<'source> {
             span if is_character(span) => Ok(TokenKind::Character(parse_character(span))),
             span if is_keyword(span) => Ok(TokenKind::Keyword(&span[1..])),
             span if is_symbol(span) => Ok(TokenKind::Symbol(span)),
-            span if is_tag(span) => Ok(TokenKind::Tag(&span[1..])),
+            span if is_builtin_tag(span) => {
+                Ok(TokenKind::BuiltInTag(BuiltInTag::from_str(span).unwrap()))
+            }
+            span if is_prefixed_tag(span) => Ok(TokenKind::PrefixedTag(&span[1..])),
             span if is_discard(span) => Ok(TokenKind::Discard(&span[2..])),
             _ => Err(TokenizationError::UnknownSequence(lexeme)),
         };
@@ -103,7 +110,6 @@ impl<'source> Token<'source> {
             | TokenKind::Character(_)
             | TokenKind::Symbol(_)
             | TokenKind::Keyword(_)
-            | TokenKind::Tag(_)
             | TokenKind::Discard(_)
             | TokenKind::Integer(_)
             | TokenKind::Float(_) => true,
@@ -280,9 +286,14 @@ fn is_keyword(span: &str) -> bool {
     span.starts_with(':') && is_symbol(&span[1..])
 }
 
-/// Check if the span is a tag.
-fn is_tag(span: &str) -> bool {
-    span.starts_with('#') && is_symbol(&span[1..])
+/// Check if the span is a built-in tag.
+fn is_builtin_tag(span: &str) -> bool {
+    BuiltInTag::from_str(span).is_some()
+}
+
+/// Check if the span is a user defined tag.
+fn is_prefixed_tag(span: &str) -> bool {
+    span.starts_with('#') && is_symbol(&span[1..]) && span.contains("/")
 }
 
 /// Check if the span is a discard.
@@ -306,7 +317,8 @@ impl Display for TokenKind<'_> {
             TokenKind::Character(c) => write!(f, "\\{}", c),
             TokenKind::Symbol(s) => write!(f, "{}", s),
             TokenKind::Keyword(k) => write!(f, ":{}", k),
-            TokenKind::Tag(t) => write!(f, "#{}", t),
+            TokenKind::BuiltInTag(t) => write!(f, "#{}", Into::<&str>::into(*t)),
+            TokenKind::PrefixedTag(t) => write!(f, "#{}", t),
             TokenKind::Discard(d) => write!(f, "#_{}", d),
             TokenKind::Integer(i) => write!(f, "{}", i),
             TokenKind::Float(fl) => write!(f, "{}", fl),

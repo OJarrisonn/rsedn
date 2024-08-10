@@ -10,7 +10,7 @@
 - [x] `#{ }` sets
 - [x] `symbols` (the full edn symbol specification)
 - [x] `:keywords`
-- [ ] `#tags` (not capturing the following element, just being parsed)
+- [x] `#user/tags`
 - [ ] `#_discard` (not being discarted, just parsed)
 - [ ] Integers (unsupported arbitrary precision integers)
 - [x] Floats
@@ -18,7 +18,7 @@
 - [x] `nil`
 - [ ] Strings (unsupported `\uNNNN` unicode sequences)
 - [x] Characters
-- [ ] Built-in tagged elements (not implemented)
+- [x] Built-in tagged elements (`#inst` and `#uuid`)
 - [x] Comments
 
 ## Usage

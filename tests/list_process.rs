@@ -2,7 +2,7 @@
 mod tests {
     use std::collections::LinkedList;
 
-    use rsedn::{lexer::Source, parser::{parse_form, FormKind}, token::Token};
+    use rsedn::{form::FormKind, lexer::Source, parser::parse_form, token::Token};
 
     #[test]
     fn simple_list() {

@@ -35,11 +35,13 @@
 //! 7. Consume the `TokenStream` using [`parse_tokens`] to produce a `Result<Option<Form>, ParsingError>`
 //! 8. Use the `Source` and the `Lexeme` to get the span of a given `Lexeme`
 
+use form::Form;
 use lexer::{Lexeme, Source};
-use parser::{Form, ParsingError};
+use parser::ParsingError;
 use token::{Token, TokenStream, TokenizationError};
 
 pub mod error;
+pub mod form;
 pub mod lexer;
 pub mod parser;
 pub mod token;

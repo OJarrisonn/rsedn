@@ -1,4 +1,8 @@
-use std::{collections::linked_list::Iter, error::Error, fmt::{self, Display, Formatter}};
+use std::{
+    collections::linked_list::Iter,
+    error::Error,
+    fmt::{self, Display, Formatter},
+};
 
 use crate::lexer::{Lexeme, Source};
 
@@ -47,7 +51,10 @@ pub enum TokenizationError {
 }
 
 impl<'source> Token<'source> {
-    pub fn parse(source: &Source<'source>, lexeme: Lexeme) -> Result<Token<'source>, TokenizationError> {
+    pub fn parse(
+        source: &Source<'source>,
+        lexeme: Lexeme,
+    ) -> Result<Token<'source>, TokenizationError> {
         let span = source.span(lexeme);
         let kind = match span {
             "(" => Ok(TokenKind::OpenParen),
@@ -60,15 +67,23 @@ impl<'source> Token<'source> {
             "nil" => Ok(TokenKind::Nil),
             "true" => Ok(TokenKind::Boolean(true)),
             "false" => Ok(TokenKind::Boolean(false)),
-            span if is_string(span) => if span.contains("\\u") {
-                Err(TokenizationError::UnicodeEscapeSequence(lexeme))
-            } else { 
-                Ok(TokenKind::String(parse_string(span)))
-            },
+            span if is_string(span) => {
+                if span.contains("\\u") {
+                    Err(TokenizationError::UnicodeEscapeSequence(lexeme))
+                } else {
+                    Ok(TokenKind::String(parse_string(span)))
+                }
+            }
             span if is_integer_n(span) => Err(TokenizationError::ArbitraryPrecisionInteger(lexeme)),
             span if is_integer_m(span) => Ok(TokenKind::Float(parse_integer_m(span))),
-            span if is_integer(span) => Ok(TokenKind::Integer(span.parse().expect(&format!("This integer should be valid `{}`", span)))),
-            span if is_float(span) => Ok(TokenKind::Float(span.parse().expect(&format!("This float should be valid `{}`", span)))),
+            span if is_integer(span) => Ok(TokenKind::Integer(
+                span.parse()
+                    .expect(&format!("This integer should be valid `{}`", span)),
+            )),
+            span if is_float(span) => Ok(TokenKind::Float(
+                span.parse()
+                    .expect(&format!("This float should be valid `{}`", span)),
+            )),
             span if is_character(span) => Ok(TokenKind::Character(parse_character(span))),
             span if is_keyword(span) => Ok(TokenKind::Keyword(&span[1..])),
             span if is_symbol(span) => Ok(TokenKind::Symbol(span)),
@@ -302,9 +317,24 @@ impl Display for TokenKind<'_> {
 impl Display for TokenizationError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            TokenizationError::ArbitraryPrecisionInteger(lexeme) => write!(f, "Arbitrary precision integer at [{}:{}]", lexeme.line(), lexeme.column()),
-            TokenizationError::UnicodeEscapeSequence(lexeme) => write!(f, "Unicode escape sequence at [{}:{}]", lexeme.line(), lexeme.column()),
-            TokenizationError::UnknownSequence(lexeme) => write!(f, "Unknown sequence at [{}:{}]", lexeme.line(), lexeme.column()),
+            TokenizationError::ArbitraryPrecisionInteger(lexeme) => write!(
+                f,
+                "Arbitrary precision integer at [{}:{}]",
+                lexeme.line(),
+                lexeme.column()
+            ),
+            TokenizationError::UnicodeEscapeSequence(lexeme) => write!(
+                f,
+                "Unicode escape sequence at [{}:{}]",
+                lexeme.line(),
+                lexeme.column()
+            ),
+            TokenizationError::UnknownSequence(lexeme) => write!(
+                f,
+                "Unknown sequence at [{}:{}]",
+                lexeme.line(),
+                lexeme.column()
+            ),
         }
     }
 }

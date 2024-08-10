@@ -61,10 +61,13 @@ pub fn parse_form<'source>(
         TokenKind::OpenBracket => parse_vector(stream).map(Some),
         TokenKind::OpenBrace => parse_map(stream).map(Some),
         TokenKind::OpenHashBrace => parse_set(stream).map(Some),
-        TokenKind::CloseBracket |
-        TokenKind::CloseBrace |
-        TokenKind::CloseParen => Err(ParsingError::UnexpectedToken(token.clone())),
-        _ if token.is_terminal() => { stream.next(); parse_terminal_token(&token).map(Some) },
+        TokenKind::CloseBracket | TokenKind::CloseBrace | TokenKind::CloseParen => {
+            Err(ParsingError::UnexpectedToken(token.clone()))
+        }
+        _ if token.is_terminal() => {
+            stream.next();
+            parse_terminal_token(&token).map(Some)
+        }
         _ => Err(ParsingError::UnexpectedToken(token.clone())),
     }
 }
@@ -72,7 +75,9 @@ pub fn parse_form<'source>(
 /// Parse a terminal token into a Form
 /// Returns an error if the token is not terminal
 /// Won't consume the token, nor the token stream
-fn parse_terminal_token<'source>(token: &Token<'source>) -> Result<Form<'source>, ParsingError<'source>> {
+fn parse_terminal_token<'source>(
+    token: &Token<'source>,
+) -> Result<Form<'source>, ParsingError<'source>> {
     let kind = match &token.kind {
         TokenKind::Keyword(span) => Ok(FormKind::Keyword(span)),
         TokenKind::Symbol(span) => Ok(FormKind::Symbol(span)),
@@ -93,12 +98,17 @@ fn parse_terminal_token<'source>(token: &Token<'source>) -> Result<Form<'source>
     })
 }
 
-fn parse_list<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'source>, ParsingError<'source>> {
+fn parse_list<'source>(
+    stream: &mut TokenStream<'source>,
+) -> Result<Form<'source>, ParsingError<'source>> {
     let mut forms = Vec::new();
 
     let start_lexeme = if let Some(token) = stream.next() {
         if token.kind != TokenKind::OpenParen {
-            return Err(ParsingError::UnexpectedTokenExpected(token.clone(), TokenKind::OpenParen));
+            return Err(ParsingError::UnexpectedTokenExpected(
+                token.clone(),
+                TokenKind::OpenParen,
+            ));
         } else {
             token.lexeme
         }
@@ -124,7 +134,7 @@ fn parse_list<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'source
                     Ok(None) => return Err(ParsingError::UnexpectedEOF(Some(end_lexeme))),
                     Err(e) => return Err(e),
                 }
-            },
+            }
             None => return Err(ParsingError::UnexpectedEOF(Some(end_lexeme))),
         }
     }
@@ -135,12 +145,17 @@ fn parse_list<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'source
     })
 }
 
-fn parse_vector<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'source>, ParsingError<'source>> {
+fn parse_vector<'source>(
+    stream: &mut TokenStream<'source>,
+) -> Result<Form<'source>, ParsingError<'source>> {
     let mut forms = Vec::new();
 
     let start_lexeme = if let Some(token) = stream.next() {
         if token.kind != TokenKind::OpenBracket {
-            return Err(ParsingError::UnexpectedTokenExpected(token.clone(), TokenKind::OpenBracket));
+            return Err(ParsingError::UnexpectedTokenExpected(
+                token.clone(),
+                TokenKind::OpenBracket,
+            ));
         } else {
             token.lexeme
         }
@@ -166,7 +181,7 @@ fn parse_vector<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'sour
                     Ok(None) => return Err(ParsingError::UnexpectedEOF(Some(end_lexeme))),
                     Err(e) => return Err(e),
                 }
-            },
+            }
             None => return Err(ParsingError::UnexpectedEOF(Some(end_lexeme))),
         }
     }
@@ -177,12 +192,17 @@ fn parse_vector<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'sour
     })
 }
 
-fn parse_map<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'source>, ParsingError<'source>> {
+fn parse_map<'source>(
+    stream: &mut TokenStream<'source>,
+) -> Result<Form<'source>, ParsingError<'source>> {
     let mut forms = Vec::new();
 
     let start_lexeme = if let Some(token) = stream.next() {
         if token.kind != TokenKind::OpenBrace {
-            return Err(ParsingError::UnexpectedTokenExpected(token.clone(), TokenKind::OpenBrace));
+            return Err(ParsingError::UnexpectedTokenExpected(
+                token.clone(),
+                TokenKind::OpenBrace,
+            ));
         } else {
             token.lexeme
         }
@@ -218,7 +238,7 @@ fn parse_map<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'source>
                     Ok(None) => return Err(ParsingError::UnexpectedEOF(Some(end_lexeme))),
                     Err(e) => return Err(e),
                 }
-            },
+            }
             None => return Err(ParsingError::UnexpectedEOF(Some(end_lexeme))),
         }
     }
@@ -229,13 +249,17 @@ fn parse_map<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'source>
     })
 }
 
-
-fn parse_set<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'source>, ParsingError<'source>> {
+fn parse_set<'source>(
+    stream: &mut TokenStream<'source>,
+) -> Result<Form<'source>, ParsingError<'source>> {
     let mut forms = Vec::new();
 
     let start_lexeme = if let Some(token) = stream.next() {
         if token.kind != TokenKind::OpenHashBrace {
-            return Err(ParsingError::UnexpectedTokenExpected(token.clone(), TokenKind::OpenHashBrace));
+            return Err(ParsingError::UnexpectedTokenExpected(
+                token.clone(),
+                TokenKind::OpenHashBrace,
+            ));
         } else {
             token.lexeme
         }
@@ -261,7 +285,7 @@ fn parse_set<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'source>
                     Ok(None) => return Err(ParsingError::UnexpectedEOF(Some(end_lexeme))),
                     Err(e) => return Err(e),
                 }
-            },
+            }
             None => return Err(ParsingError::UnexpectedEOF(Some(end_lexeme))),
         }
     }
@@ -275,14 +299,34 @@ fn parse_set<'source>(stream: &mut TokenStream<'source>) -> Result<Form<'source>
 impl Display for ParsingError<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ParsingError::UnexpectedEOF(lexeme) => if let Some(lexeme) = lexeme {
-                write!(f, "Unexpected EOF at [{}:{}]", lexeme.line(), lexeme.column())
-            } else {
-                write!(f, "Unexpected EOF")
-            },
+            ParsingError::UnexpectedEOF(lexeme) => {
+                if let Some(lexeme) = lexeme {
+                    write!(
+                        f,
+                        "Unexpected EOF at [{}:{}]",
+                        lexeme.line(),
+                        lexeme.column()
+                    )
+                } else {
+                    write!(f, "Unexpected EOF")
+                }
+            }
             ParsingError::UnexpectedToken(token) => write!(f, "Unexpected token {}", token.kind),
-            ParsingError::UnexpectedTokenExpected(token, expected) => write!(f, "Unexpected token [{}:{}] {}, expected {}", token.lexeme.line(), token.lexeme.column(), token.kind, expected),
-            ParsingError::NonTerminalToken(token) => write!(f, "Non-terminal token [{}:{}] {}", token.lexeme.line(), token.lexeme.column(), token.kind),
+            ParsingError::UnexpectedTokenExpected(token, expected) => write!(
+                f,
+                "Unexpected token [{}:{}] {}, expected {}",
+                token.lexeme.line(),
+                token.lexeme.column(),
+                token.kind,
+                expected
+            ),
+            ParsingError::NonTerminalToken(token) => write!(
+                f,
+                "Non-terminal token [{}:{}] {}",
+                token.lexeme.line(),
+                token.lexeme.column(),
+                token.kind
+            ),
         }
     }
 }
@@ -298,28 +342,28 @@ impl<'source> Display for Form<'source> {
                     write!(f, "{} ", form)?;
                 }
                 write!(f, ")")
-            },
+            }
             FormKind::Vector(forms) => {
                 write!(f, "[ ")?;
                 for form in forms {
                     write!(f, "{} ", form)?;
                 }
                 write!(f, "]")
-            },
+            }
             FormKind::Map(forms) => {
                 write!(f, "{{ ")?;
                 for (key, value) in forms {
                     write!(f, "{} {}, ", key, value)?;
                 }
                 write!(f, "}}")
-            },
+            }
             FormKind::Set(forms) => {
                 write!(f, "#{{ ")?;
                 for form in forms {
                     write!(f, "{} ", form)?;
                 }
                 write!(f, "}}")
-            },
+            }
             FormKind::Keyword(span) => write!(f, ":{}", span),
             FormKind::Symbol(span) => write!(f, "{}", span),
             FormKind::Tag(span) => write!(f, "#{}", span),
@@ -327,13 +371,17 @@ impl<'source> Display for Form<'source> {
             FormKind::Integer(span) => write!(f, "{}", span),
             FormKind::Float(span) => write!(f, "{}", span),
             FormKind::Boolean(span) => write!(f, "{}", span),
-            FormKind::Character(span) => write!(f, "\\{}", match span {
-                '\n' => "newline",
-                '\r' => "return",
-                '\t' => "tab",
-                ' ' => "space",
-                c => return write!(f, "\\{}", c),
-            }),
+            FormKind::Character(span) => write!(
+                f,
+                "\\{}",
+                match span {
+                    '\n' => "newline",
+                    '\r' => "return",
+                    '\t' => "tab",
+                    ' ' => "space",
+                    c => return write!(f, "\\{}", c),
+                }
+            ),
             FormKind::String(span) => write!(f, "\"{}\"", span),
             FormKind::Nil => write!(f, "nil"),
         }

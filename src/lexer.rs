@@ -8,7 +8,7 @@ const WHITESPACE: &str = " \t\n\r,";
 /// The source struct. It's reponsible for generating a vector of `Lexeme` from source code (`&str`).
 ///
 /// Can be also used to get the span of a `Lexeme` in the source code.
-/// 
+///
 /// It's important to keep this struct and the source text alive as long as all your AST is alive
 #[derive(Debug, Clone)]
 pub struct Source<'source> {
@@ -27,7 +27,7 @@ pub struct Source<'source> {
 /// A `Lexeme` is a span of the source code. It's represented by a start and end index (consider the source code as an array of bytes).
 /// A `Lexeme` isn't categorized, just a piece of the source code.
 /// Lexemes can be parsed into [`Token`].
-/// 
+///
 /// [`Token`]: token/enum.Token.html
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Lexeme {

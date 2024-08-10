@@ -162,24 +162,6 @@ fn parse_integer_m(span: &str) -> f64 {
 }
 
 /// Check if the span is a float.
-/// TODO: Expand number notion
-fn _is_float(span: &str) -> bool {
-    let mut chars = span.chars();
-
-    match chars.next() {
-        Some('-') | Some('+') => {
-            chars.all(|c| c.is_digit(10) || c == '.') && chars.filter(|&c| c == '.').count() == 1
-        }
-        Some('.') => chars.all(|c| c.is_digit(10)),
-        Some('0') => match chars.next() {
-            Some('.') => chars.all(|c| c.is_digit(10)),
-            _ => false,
-        },
-        _ => chars.all(|c| c.is_digit(10) || c == '.') && chars.filter(|&c| c == '.').count() == 1,
-    }
-}
-
-/// Check if the span is a float.
 /// TODO: Refactor this function
 fn is_float(span: &str) -> bool {
     let matches = span

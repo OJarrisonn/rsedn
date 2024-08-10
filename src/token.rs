@@ -1,10 +1,15 @@
+use std::collections::linked_list::Iter;
+
 use crate::lexer::{Lexeme, Source};
 
 const SYMBOL_CONSTITUENT: &str = ".*+!-_?$%&=<>:#";
 const SYMBOL_STARTER: &str = ".*+!-_?$%&=<>";
 
+pub type TokenStream<'source> = Iter<'source, Token<'source>>;
+
 /// A token in the source code.
 /// This contains the kind of token and the lexeme that represents it.
+#[derive(Debug, Clone)]
 pub struct Token<'source> {
     pub kind: TokenKind<'source>,
     pub lexeme: Lexeme,
@@ -12,6 +17,7 @@ pub struct Token<'source> {
 
 /// The kind of token.
 /// This classifies the token into a specific kind.
+#[derive(Debug, Clone, PartialEq)]
 pub enum TokenKind<'source> {
     Nil,
     OpenParen,
@@ -33,7 +39,7 @@ pub enum TokenKind<'source> {
 }
 
 impl<'source> Token<'source> {
-    pub fn parse(source: Source<'source>, lexeme: Lexeme) -> Result<Token<'source>, String> {
+    pub fn parse(source: &Source<'source>, lexeme: Lexeme) -> Result<Token<'source>, String> {
         let span = source.span(lexeme);
         let kind = match span {
             "(" => Ok(TokenKind::OpenParen),
@@ -47,25 +53,54 @@ impl<'source> Token<'source> {
             "true" => Ok(TokenKind::Boolean(true)),
             "false" => Ok(TokenKind::Boolean(false)),
             span if is_string(span) => Ok(TokenKind::String(parse_string(span))),
-            span if is_integer_n(span) => Err(format!("Integer with arbitrary precision not supported at [{}:{}] {}", lexeme.line(), lexeme.column(), span)),
+            span if is_integer_n(span) => Err(format!(
+                "Integer with arbitrary precision not supported at [{}:{}] {}",
+                lexeme.line(),
+                lexeme.column(),
+                span
+            )),
             span if is_integer_m(span) => Ok(TokenKind::Float(parse_integer_m(span))),
-            span if is_integer(span) => Ok(TokenKind::Integer(span.parse().unwrap())),
-            span if is_float(span) => Ok(TokenKind::Float(span.parse().unwrap())),
+            span if is_integer(span) => Ok(TokenKind::Integer(span.parse().expect(&format!("This integer should be valid `{}`", span)))),
+            span if is_float(span) => Ok(TokenKind::Float(span.parse().expect(&format!("This float should be valid `{}`", span)))),
             span if is_character(span) => Ok(TokenKind::Character(parse_character(span))),
             span if is_keyword(span) => Ok(TokenKind::Keyword(&span[1..])),
             span if is_symbol(span) => Ok(TokenKind::Symbol(span)),
             span if is_tag(span) => Ok(TokenKind::Tag(&span[1..])),
             span if is_discard(span) => Ok(TokenKind::Discard(&span[2..])),
-            _ => Err(format!("Unknown sequence at [{}:{}] `{}`", lexeme.line(), lexeme.column(), span)),
+            _ => Err(format!(
+                "Unknown sequence at [{}:{}] `{}`",
+                lexeme.line(),
+                lexeme.column(),
+                span
+            )),
         };
 
         kind.map(|kind| Token { kind, lexeme })
+    }
+
+    pub fn is_terminal(&self) -> bool {
+        match self.kind {
+            TokenKind::Nil
+            | TokenKind::Boolean(_)
+            | TokenKind::String(_)
+            | TokenKind::Character(_)
+            | TokenKind::Symbol(_)
+            | TokenKind::Keyword(_)
+            | TokenKind::Tag(_)
+            | TokenKind::Discard(_)
+            | TokenKind::Integer(_)
+            | TokenKind::Float(_) => true,
+            _ => false,
+        }
     }
 }
 
 /// Check if the span is a string.
 fn is_string(span: &str) -> bool {
-    span.starts_with('"') && span.ends_with('"') && span.len() > 1 && span.chars().nth_back(1) != Some('\\')
+    span.starts_with('"')
+        && span.ends_with('"')
+        && span.len() > 1
+        && span.chars().nth_back(1) != Some('\\')
 }
 
 /// Parse a string span into an actual string.
@@ -77,12 +112,16 @@ fn parse_string(span: &str) -> String {
         .replace("\\r", "\r")
         .replace("\\t", "\t")
         .replace("\\\\", "\\")
-        // TODO: \uXXXX and \UXXXXXXXX
+    // TODO: \uXXXX and \UXXXXXXXX
 }
 
 /// Check if the span is a character.
 fn is_character(span: &str) -> bool {
-    span.starts_with('\\') && span.len() == 2 || span == "\\space" || span == "\\newline" || span == "\\tab" || span == "\\return"
+    span.starts_with('\\') && span.len() == 2
+        || span == "\\space"
+        || span == "\\newline"
+        || span == "\\tab"
+        || span == "\\return"
 }
 
 /// Parse a character span into an actual character.
@@ -101,9 +140,10 @@ fn parse_character(span: &str) -> char {
 fn is_integer(span: &str) -> bool {
     let mut chars = span.chars();
     match chars.next() {
-        Some('-') | Some('+') => chars.all(|c| c.is_digit(10)),
+        Some('-') | Some('+') => span.len() > 1 && chars.all(|c| c.is_digit(10)),
         Some('0') => chars.next().is_none(),
-        _ => chars.all(|c| c.is_digit(10)),
+        Some(c) if c.is_digit(10) => chars.all(|c| c.is_digit(10)),
+        _ => false,
     }
 }
 
@@ -127,7 +167,9 @@ fn _is_float(span: &str) -> bool {
     let mut chars = span.chars();
 
     match chars.next() {
-        Some('-') | Some('+') => chars.all(|c| c.is_digit(10) || c == '.') && chars.filter(|&c| c == '.').count() == 1,
+        Some('-') | Some('+') => {
+            chars.all(|c| c.is_digit(10) || c == '.') && chars.filter(|&c| c == '.').count() == 1
+        }
         Some('.') => chars.all(|c| c.is_digit(10)),
         Some('0') => match chars.next() {
             Some('.') => chars.all(|c| c.is_digit(10)),
@@ -140,9 +182,18 @@ fn _is_float(span: &str) -> bool {
 /// Check if the span is a float.
 /// TODO: Refactor this function
 fn is_float(span: &str) -> bool {
-    let matches = span.chars().all(|c| c.is_digit(10) || c == '.' || c == 'e' || c == 'E' || c == '-' || c == '+') && span.matches('.').count() <= 1 && span.matches('e').count() <= 1 && span.matches('E').count() <= 1 && span.matches('-').count() <= 1 && span.matches('+').count() <= 1;
-    if !matches { return false; }
-    
+    let matches = span
+        .chars()
+        .all(|c| c.is_digit(10) || c == '.' || c == 'e' || c == 'E' || c == '-' || c == '+')
+        && span.matches('.').count() <= 1
+        && span.matches('e').count() <= 1
+        && span.matches('E').count() <= 1
+        && span.matches('-').count() <= 1
+        && span.matches('+').count() <= 1;
+    if !matches {
+        return false;
+    }
+
     let span = span.to_lowercase();
     let parts: Vec<&str> = span.split('.').collect();
 
@@ -150,16 +201,22 @@ fn is_float(span: &str) -> bool {
         let integer = parts[0];
         let decimal = parts[1];
 
-        if !is_integer(integer) { return false; }
-        if decimal.chars().all(|c| c.is_digit(10)) { 
-            return true; 
+        if !is_integer(integer) {
+            return false;
+        }
+        if decimal.chars().all(|c| c.is_digit(10)) {
+            return true;
         } else {
             let parts = decimal.split('e').collect::<Vec<&str>>();
             if parts.len() == 2 {
                 let mantissa = parts[0];
                 let exponent = parts[1];
-                if !mantissa.chars().all(|c| c.is_digit(10)) { return false; }
-                if !is_integer(exponent) { return false; }
+                if !mantissa.chars().all(|c| c.is_digit(10)) {
+                    return false;
+                }
+                if !is_integer(exponent) {
+                    return false;
+                }
                 return true;
             } else {
                 let mantissa = parts[0];
@@ -172,15 +229,18 @@ fn is_float(span: &str) -> bool {
         if parts.len() == 2 {
             let mantissa = parts[0];
             let exponent = parts[1];
-            if !mantissa.chars().all(|c| c.is_digit(10)) { return false; }
-            if !is_integer(exponent) { return false; }
+            if !mantissa.chars().all(|c| c.is_digit(10)) {
+                return false;
+            }
+            if !is_integer(exponent) {
+                return false;
+            }
             return true;
         } else {
             let mantissa = parts[0];
 
             mantissa.chars().all(|c| c.is_digit(10))
         }
-
     } else {
         false
     }
@@ -203,13 +263,15 @@ fn is_symbol_name(span: &str) -> bool {
     let mut chars = span.chars();
     match chars.next() {
         Some('+') | Some('-') | Some('.') => match chars.next() {
-            Some(c) if c.is_numeric() => false,
-            Some(c) if !c.is_numeric() => chars.all(|c| c.is_alphanumeric() || c == '-' || c == '_'),
+            None => true,
+            Some(c) if c.is_alphabetic() || SYMBOL_STARTER.contains(c) => {
+                chars.all(|c| c.is_alphanumeric() || SYMBOL_CONSTITUENT.contains(c))
+            }
             _ => false,
         },
         Some(c) if c.is_alphabetic() || SYMBOL_STARTER.contains(c) => {
             chars.all(|c| c.is_alphanumeric() || SYMBOL_CONSTITUENT.contains(c))
-        },
+        }
         _ => false,
     }
 }
@@ -239,5 +301,6 @@ mod tests {
         assert!(is_symbol("foo/bar"));
         assert!(is_symbol("foo/bar-baz"));
         assert!(is_symbol("foo/bar-baz!"));
+        assert!(is_symbol("+"));
     }
 }

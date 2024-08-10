@@ -6,7 +6,7 @@ const DELIMITERS: &str = "()[]{}";
 const WHITESPACE: &str = " \t\n\r,";
 
 /// The source struct. It's reponsible for generating a vector of `Lexeme` from source code (`&str`).
-/// 
+///
 /// Can be also used to get the span of a `Lexeme` in the source code.
 #[derive(Debug, Clone)]
 pub struct Source<'source> {
@@ -45,10 +45,19 @@ impl<'source> Source<'source> {
         loop {
             match self.peek() {
                 None => break,
-                Some(c) if DELIMITERS.contains(c) => lexemes.push(self.consume().expect("There should be a delimiter character here to be consumed")),
+                Some(c) if DELIMITERS.contains(c) => lexemes.push(
+                    self.consume()
+                        .expect("There should be a delimiter character here to be consumed"),
+                ),
                 Some(c) if WHITESPACE.contains(c) => self.ignore_whitespace(),
-                Some('"') => lexemes.push(self.consume_string().expect("There should be a valid string lexeme here")),
-                _ => lexemes.push(self.consume_lexeme().expect("There should be a valid lexeme here to be consumed")),
+                Some('"') => lexemes.push(
+                    self.consume_string()
+                        .expect("There should be a valid string lexeme here"),
+                ),
+                _ => lexemes.push(
+                    self.consume_lexeme()
+                        .expect("There should be a valid lexeme here to be consumed"),
+                ),
             }
         }
 
@@ -69,7 +78,7 @@ impl<'source> Source<'source> {
 
         if let Some(c) = next {
             self.current += c.len_utf8();
-            
+
             if c == '\n' {
                 self.line += 1;
                 self.column = 1;
@@ -77,7 +86,12 @@ impl<'source> Source<'source> {
                 self.column += 1;
             }
 
-            Some(Lexeme { start, end: self.current, line, column })
+            Some(Lexeme {
+                start,
+                end: self.current,
+                line,
+                column,
+            })
         } else {
             None
         }
@@ -100,7 +114,12 @@ impl<'source> Source<'source> {
         if start == self.current {
             None
         } else {
-            Some(Lexeme { start, end: self.current, line, column })
+            Some(Lexeme {
+                start,
+                end: self.current,
+                line,
+                column,
+            })
         }
     }
 
@@ -129,17 +148,26 @@ impl<'source> Source<'source> {
 
         while let Some(c) = self.peek() {
             match c {
-                '"' => { self.consume(); break; },
+                '"' => {
+                    self.consume();
+                    break;
+                }
                 '\\' => {
                     self.consume();
                     self.consume();
-                },
-                _ => { self.consume(); }
+                }
+                _ => {
+                    self.consume();
+                }
             }
         }
 
-        Some(Lexeme { start, end: self.current, line, column })
-
+        Some(Lexeme {
+            start,
+            end: self.current,
+            line,
+            column,
+        })
     }
 
     /// Get the span of a `Lexeme` in the source code.
@@ -180,6 +208,16 @@ impl Lexeme {
     pub fn column(&self) -> usize {
         self.column
     }
+
+    /// Join two `Lexeme` into a single one.
+    pub fn join<'source>(&self, other: &Self) -> Self {
+        Self {
+            start: self.start,
+            end: other.end,
+            line: self.line,
+            column: self.column,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -189,9 +227,9 @@ mod tests {
     #[test]
     fn ignore_whitespace() {
         let mut source: Source = "  \t\n\r,()[]{}'\"abc".into();
-        
+
         source.ignore_whitespace();
-        
+
         assert_eq!(&source.source[source.current..], "()[]{}'\"abc");
     }
 
@@ -199,16 +237,21 @@ mod tests {
     fn lexemes_no_string() {
         let mut source: Source = "(defn hello 123)".into();
         let lexemes = source.lex();
-        let tokens = lexemes.iter().map(|l| l.as_str(&source)).collect::<Vec<&str>>();
+        let tokens = lexemes
+            .iter()
+            .map(|l| l.as_str(&source))
+            .collect::<Vec<&str>>();
         assert_eq!(tokens, vec!["(", "defn", "hello", "123", ")"])
- 
     }
 
     #[test]
     fn string_lexemes() {
         let mut source: Source = "(def msg \"Hello World\")".into();
         let lexemes = source.lex();
-        let tokens = lexemes.iter().map(|l| l.as_str(&source)).collect::<Vec<&str>>();
+        let tokens = lexemes
+            .iter()
+            .map(|l| l.as_str(&source))
+            .collect::<Vec<&str>>();
         assert_eq!(tokens, vec!["(", "def", "msg", "\"Hello World\"", ")"])
     }
 

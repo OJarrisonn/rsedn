@@ -2,7 +2,15 @@
 name = "rsedn"
 version = "0.1.0"
 edition = "2021"
-author = "Jorge Harrisonn <j.h.m.t.v.10@gmail.com>"
+authors = [ "Jorge Harrisonn <j.h.m.t.v.10@gmail.com>" ]
 description = "A Rust library for reading and writing EDN (Extensible Data Notation) data."
+categories = [ "data-serialization" ]
+keywords = [ "edn", "serialization", "deserialization", "data" ]
+license = "MIT"
+repository = "https://github.com/OJarrisonn/rsedn"
+documentation = "https://docs.rs/rsedn"
+readme = "README.md"
+homepage = "https://github.com/OJarrisonn/rsedn"
+rust-version = "1.70.0"
 
 [dependencies]

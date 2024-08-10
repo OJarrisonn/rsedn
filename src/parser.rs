@@ -3,7 +3,9 @@
 use std::{error::Error, fmt::Display};
 
 use crate::{
-    form::{Form, FormKind}, lexer::Lexeme, token::{Token, TokenKind, TokenStream}
+    form::{Form, FormKind},
+    lexer::Lexeme,
+    token::{Token, TokenKind, TokenStream},
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -13,7 +15,6 @@ pub enum ParsingError<'source> {
     UnexpectedTokenExpected(Token<'source>, TokenKind<'source>),
     NonTerminalToken(Token<'source>),
 }
-
 
 /// Take a token stream and parse it into a Form consuming tokens in the head of the stream
 /// If the stream is empty, returns None

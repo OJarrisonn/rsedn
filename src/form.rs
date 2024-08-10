@@ -32,7 +32,6 @@ impl PartialEq for Form<'_> {
     }
 }
 
-
 impl<'source> Display for Form<'source> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.kind {

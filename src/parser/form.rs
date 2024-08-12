@@ -3,7 +3,7 @@ use std::fmt::Display;
 use chrono::{DateTime, Local};
 use uuid::Uuid;
 
-use crate::lexer::Lexeme;
+use crate::lexer::lexeme::Lexeme;
 
 #[derive(Debug, Clone)]
 pub struct Form<'source> {

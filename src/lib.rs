@@ -4,22 +4,27 @@
 //!
 //! ## Example
 //! ```rust
-//! use std::collections::LinkedList;
 //!
 //! fn main() {
+//!     use std::collections::LinkedList;
+//!    
+//!     use rsedn::{
+//!         lexer::{source::Source, token::Token},
+//!         parser::{self, form::FormKind},
+//!     };
 //!     // A Source can be created from a &str
-//!     let mut source = "(defn add [a b] (+ a b))".into::<rsedn::Source>();
+//!     let mut source: Source = "(defn add [a b] (+ a b))".into();
 //!     // Lex the source into Vec<Lexeme>
 //!     let lexemes = source.lex();
-//!    // Parse the lexemes into a LinkedList<Token>
+//!     // Parse the lexemes into a LinkedList<Token>
 //!     let tokens = lexemes
 //!         .into_iter()
 //!         .map(|lexeme| Token::parse(&source, lexeme)) // Parse the lexeme into a Token
 //!         .map(|token| token.unwrap()) // Unwrap the Result<Token, ParsingError>
 //!         .collect::<LinkedList<_>>();
 //!     let mut token_stream = tokens.iter(); // Create a TokenStream from the LinkedList
-//!     let form = parse_tokens(&mut token_stream).unwrap().unwrap(); // Parse the tokens into a Form
-//!     
+//!     let form = parser::parse_form(&mut token_stream).unwrap().unwrap(); // Parse the tokens into a Form
+//!
 //!     assert!(matches!(form.kind, FormKind::List(_)));
 //! }
 //! ```
@@ -35,17 +40,15 @@
 //! 7. Consume the `TokenStream` using [`parse_tokens`] to produce a `Result<Option<Form>, ParsingError>`
 //! 8. Use the `Source` and the `Lexeme` to get the span of a given `Lexeme`
 
-use form::Form;
-use lexer::{Lexeme, Source};
-use parser::ParsingError;
-use token::{Token, TokenStream, TokenizationError};
+use lexer::{
+    lexeme::Lexeme,
+    source::Source,
+    token::{Token, TokenStream, TokenizationError},
+};
+use parser::{form::Form, ParsingError};
 
-mod builtin_tag;
-pub mod error;
-pub mod form;
 pub mod lexer;
 pub mod parser;
-pub mod token;
 
 /// Produces a [`Source`] from a `&str`
 /// The first step of the parsing process

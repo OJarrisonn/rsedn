@@ -2,7 +2,10 @@
 mod tests {
     use std::collections::LinkedList;
 
-    use rsedn::{form::FormKind, lexer::Source, parser::parse_form, token::Token};
+    use rsedn::{
+        lexer::{source::Source, token::Token},
+        parser::{self, form::FormKind},
+    };
 
     #[test]
     fn simple_list() {
@@ -14,7 +17,7 @@ mod tests {
             .map(|lexeme| Token::parse(&source, lexeme))
             .map(|token| token.unwrap())
             .collect::<LinkedList<_>>();
-        let form = parse_form(&mut tokens.iter()).unwrap().unwrap();
+        let form = parser::parse_form(&mut tokens.iter()).unwrap().unwrap();
 
         assert!(matches!(form.kind, FormKind::List(_)));
     }
@@ -25,14 +28,15 @@ mod tests {
         (defn hello_world 
             "Documentation string" 
             [arg1 & args] 
-            (println "Hello World " arg1 args))"#.into();
+            (println "Hello World " arg1 args))"#
+            .into();
         let lexemes = source.lex();
         let tokens = lexemes
             .into_iter()
             .map(|lexeme| Token::parse(&source, lexeme))
             .map(|token| token.unwrap())
             .collect::<LinkedList<_>>();
-        let form = parse_form(&mut tokens.iter()).unwrap().unwrap();
+        let form = parser::parse_form(&mut tokens.iter()).unwrap().unwrap();
 
         assert!(matches!(form.kind, FormKind::List(_)));
     }

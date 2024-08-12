@@ -2,7 +2,11 @@
 mod tests {
     use std::collections::LinkedList;
 
-    use rsedn::{form::FormKind, lex_source, parse_lexeme, parser::parse_form, source_from_str};
+    use rsedn::{
+        lex_source, parse_lexeme,
+        parser::{form::FormKind, parse_form},
+        source_from_str,
+    };
 
     #[test]
     fn tagged() {
@@ -12,7 +16,10 @@ mod tests {
         let tokens = lexemes
             .into_iter()
             .map(|lexeme| parse_lexeme(&source, lexeme))
-            .map(|res| { assert!(res.is_ok()); res.unwrap() })
+            .map(|res| {
+                assert!(res.is_ok());
+                res.unwrap()
+            })
             .collect::<LinkedList<_>>();
         let form = parse_form(&mut tokens.iter());
         assert!(form.is_ok());
@@ -31,7 +38,10 @@ mod tests {
         let tokens = lexemes
             .into_iter()
             .map(|lexeme| parse_lexeme(&source, lexeme))
-            .map(|res| { assert!(res.is_ok()); res.unwrap() })
+            .map(|res| {
+                assert!(res.is_ok());
+                res.unwrap()
+            })
             .collect::<LinkedList<_>>();
         let form = parse_form(&mut tokens.iter());
         assert!(form.is_ok());

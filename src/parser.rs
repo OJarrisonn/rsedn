@@ -3,11 +3,18 @@
 use std::{error::Error, fmt::Display};
 
 use crate::{
-    builtin_tag::BuiltInTag,
-    form::{Form, FormKind},
-    lexer::Lexeme,
-    token::{Token, TokenKind, TokenStream},
+    lexer::{
+        lexeme::Lexeme,
+        token::{Token, TokenKind, TokenStream},
+    },
+    parser::{
+        builtin_tag::BuiltInTag,
+        form::{Form, FormKind},
+    },
 };
+
+pub mod builtin_tag;
+pub mod form;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ParsingError<'source> {
@@ -36,16 +43,18 @@ pub fn parse_form<'source>(
         TokenKind::OpenBrace => parse_map(stream).map(Some),
         TokenKind::OpenHashBrace => parse_set(stream).map(Some),
 
-        TokenKind::CloseBracket | TokenKind::CloseBrace | TokenKind::CloseParen => Err(ParsingError::UnexpectedToken(token.clone())),
-        
+        TokenKind::CloseBracket | TokenKind::CloseBrace | TokenKind::CloseParen => {
+            Err(ParsingError::UnexpectedToken(token.clone()))
+        }
+
         TokenKind::BuiltInTag(_) => parse_built_in_tagged_element(stream).map(Some),
         TokenKind::PrefixedTag(_) => parse_tagged_element(stream).map(Some),
-        
+
         _ if token.is_terminal() => {
             stream.next();
             parse_terminal_token(&token).map(Some)
         }
-        
+
         _ => Err(ParsingError::UnexpectedToken(token.clone())),
     }
 }
@@ -327,7 +336,7 @@ fn parse_built_in_tagged_element<'source>(
             } else {
                 Err(ParsingError::UnexpectedForm(form))
             }
-        },
+        }
     }
 }
 

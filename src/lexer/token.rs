@@ -5,8 +5,8 @@ use std::{
 };
 
 use crate::{
-    builtin_tag::BuiltInTag,
-    lexer::{Lexeme, Source},
+    lexer::{lexeme::Lexeme, source::Source},
+    parser::builtin_tag::BuiltInTag,
 };
 
 const SYMBOL_CONSTITUENT: &str = ".*+!-_?$%&=<>:#";
@@ -355,7 +355,7 @@ impl Error for TokenizationError {}
 
 #[cfg(test)]
 mod tests {
-    use crate::token::is_symbol;
+    use crate::lexer::token::is_symbol;
 
     #[test]
     fn symbol_check() {

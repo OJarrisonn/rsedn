@@ -12,11 +12,7 @@ impl BuiltInTag {
     /// This is case-sensitive.
     /// The string may or not have a leading `#`.
     pub fn from_str(tag: &str) -> Option<Self> {
-        let tag = if tag.starts_with('#') {
-            &tag[1..]
-        } else {
-            tag
-        };
+        let tag = if tag.starts_with('#') { &tag[1..] } else { tag };
 
         match tag {
             "inst" => Some(Self::Inst),

@@ -1,6 +1,6 @@
 [package]
 name = "rsedn"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = [ "Jorge Harrisonn <j.h.m.t.v.10@gmail.com>" ]
 description = "A Rust library for reading and writing EDN (Extensible Data Notation) data."

@@ -82,11 +82,11 @@ impl<'source> Token<'source> {
             span if is_integer_m(span) => Ok(TokenKind::Float(parse_integer_m(span))),
             span if is_integer(span) => Ok(TokenKind::Integer(
                 span.parse()
-                    .expect(&format!("This integer should be valid `{}`", span)),
+                    .unwrap_or_else(|_| panic!("This integer should be valid `{}`", span)),
             )),
             span if is_float(span) => Ok(TokenKind::Float(
                 span.parse()
-                    .expect(&format!("This float should be valid `{}`", span)),
+                    .unwrap_or_else(|_| panic!("This float should be valid `{}`", span)),
             )),
             span if is_character(span) => Ok(TokenKind::Character(parse_character(span))),
             span if is_keyword(span) => Ok(TokenKind::Keyword(&span[1..])),
@@ -163,9 +163,9 @@ fn parse_character(span: &str) -> char {
 fn is_integer(span: &str) -> bool {
     let mut chars = span.chars();
     match chars.next() {
-        Some('-') | Some('+') => span.len() > 1 && chars.all(|c| c.is_digit(10)),
+        Some('-') | Some('+') => span.len() > 1 && chars.all(|c| c.is_ascii_digit()),
         Some('0') => chars.next().is_none(),
-        Some(c) if c.is_digit(10) => chars.all(|c| c.is_digit(10)),
+        Some(c) if c.is_ascii_digit() => chars.all(|c| c.is_ascii_digit()),
         _ => false,
     }
 }
@@ -189,7 +189,7 @@ fn parse_integer_m(span: &str) -> f64 {
 fn is_float(span: &str) -> bool {
     let matches = span
         .chars()
-        .all(|c| c.is_digit(10) || c == '.' || c == 'e' || c == 'E' || c == '-' || c == '+')
+        .all(|c| c.is_ascii_digit() || c == '.' || c == 'e' || c == 'E' || c == '-' || c == '+')
         && span.matches('.').count() <= 1
         && span.matches('e').count() <= 1
         && span.matches('E').count() <= 1
@@ -209,24 +209,24 @@ fn is_float(span: &str) -> bool {
         if !is_integer(integer) {
             return false;
         }
-        if decimal.chars().all(|c| c.is_digit(10)) {
-            return true;
+        if decimal.chars().all(|c| c.is_ascii_digit()) {
+            true
         } else {
             let parts = decimal.split('e').collect::<Vec<&str>>();
             if parts.len() == 2 {
                 let mantissa = parts[0];
                 let exponent = parts[1];
-                if !mantissa.chars().all(|c| c.is_digit(10)) {
+                if !mantissa.chars().all(|c| c.is_ascii_digit()) {
                     return false;
                 }
                 if !is_integer(exponent) {
                     return false;
                 }
-                return true;
+                true
             } else {
                 let mantissa = parts[0];
 
-                mantissa.chars().all(|c| c.is_digit(10))
+                mantissa.chars().all(|c| c.is_ascii_digit())
             }
         }
     } else if parts.len() == 1 {
@@ -234,7 +234,7 @@ fn is_float(span: &str) -> bool {
         if parts.len() == 2 {
             let mantissa = parts[0];
             let exponent = parts[1];
-            if !mantissa.chars().all(|c| c.is_digit(10)) {
+            if !mantissa.chars().all(|c| c.is_ascii_digit()) {
                 return false;
             }
             if !is_integer(exponent) {
@@ -244,7 +244,7 @@ fn is_float(span: &str) -> bool {
         } else {
             let mantissa = parts[0];
 
-            mantissa.chars().all(|c| c.is_digit(10))
+            mantissa.chars().all(|c| c.is_ascii_digit())
         }
     } else {
         false
@@ -257,7 +257,7 @@ fn is_symbol(span: &str) -> bool {
         true
     } else if span.contains("/") {
         let mut parts = span.split("/");
-        parts.all(|part| is_symbol_name(part))
+        parts.all(is_symbol_name)
     } else {
         is_symbol_name(span)
     }

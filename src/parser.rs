@@ -52,7 +52,7 @@ pub fn parse_form<'source>(
 
         _ if token.is_terminal() => {
             stream.next();
-            parse_terminal_token(&token).map(Some)
+            parse_terminal_token(token).map(Some)
         }
 
         _ => Err(ParsingError::UnexpectedToken(token.clone())),
@@ -307,7 +307,7 @@ fn parse_built_in_tagged_element<'source>(
     match tag {
         BuiltInTag::Inst => {
             if let FormKind::String(string) = &form.kind {
-                let dt = if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(&string) {
+                let dt = if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(string) {
                     dt.into()
                 } else {
                     return Err(ParsingError::UnexpectedSequence(string.clone()));
@@ -323,7 +323,7 @@ fn parse_built_in_tagged_element<'source>(
         }
         BuiltInTag::UUID => {
             if let FormKind::String(string) = &form.kind {
-                let uuid = if let Ok(uuid) = uuid::Uuid::parse_str(&string) {
+                let uuid = if let Ok(uuid) = uuid::Uuid::parse_str(string) {
                     uuid
                 } else {
                     return Err(ParsingError::UnexpectedSequence(string.clone()));

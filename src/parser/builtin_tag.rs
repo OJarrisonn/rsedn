@@ -22,9 +22,9 @@ impl BuiltInTag {
     }
 }
 
-impl Into<&str> for BuiltInTag {
-    fn into(self) -> &'static str {
-        match self {
+impl From<BuiltInTag> for &str {
+    fn from(val: BuiltInTag) -> Self {
+        match val {
             BuiltInTag::Inst => "inst",
             BuiltInTag::UUID => "uuid",
         }

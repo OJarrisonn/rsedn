@@ -24,7 +24,7 @@ mod tests {
         let form = parse_form(&mut tokens.iter());
         assert!(form.is_ok());
         let form = form.unwrap();
-        assert!(matches!(form, Some(_)));
+        assert!(form.is_some());
         let form = form.unwrap();
         assert!(matches!(form.kind, FormKind::Tagged(_, _)));
         dbg!(form);
@@ -46,7 +46,7 @@ mod tests {
         let form = parse_form(&mut tokens.iter());
         assert!(form.is_ok());
         let form = form.unwrap();
-        assert!(matches!(form, Some(_)));
+        assert!(form.is_some());
         let form = form.unwrap();
         assert!(matches!(form.kind, FormKind::UUID(_)));
         dbg!(form);
